@@ -1,9 +1,7 @@
-using System.Net.Security;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Npgsql;
 using RestaurantApi.Data;
 using RestaurantApi.Models;
 
@@ -12,16 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 // ── 資料庫 ──────────────────────────────────────────────
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")!;
 
-// NpgsqlDataSource：使用 SSL 並繞過憑證驗證（相容 Render PostgreSQL）
-var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
-dataSourceBuilder.ConfigureSslClientAuthenticationOptions(sslOpts =>
-{
-    sslOpts.RemoteCertificateValidationCallback = (_, _, _, _) => true;
-});
-var dataSource = dataSourceBuilder.Build();
-
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(dataSource));
+    options.UseNpgsql(connectionString));
 
 // ── JWT 驗證 ─────────────────────────────────────────────
 var jwtSecret = builder.Configuration["JwtSettings:Secret"]!;
