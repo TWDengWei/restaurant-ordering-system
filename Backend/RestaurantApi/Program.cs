@@ -51,7 +51,6 @@ using (var scope = app.Services.CreateScope())
     {
         db.Database.EnsureCreated();
 
-        // Seed 管理員帳號（預設 admin / admin123）
         if (!db.Admins.Any())
         {
             db.Admins.Add(new Admin
@@ -62,7 +61,6 @@ using (var scope = app.Services.CreateScope())
             db.SaveChanges();
         }
 
-        // Seed 10 張桌位
         if (!db.Tables.Any())
         {
             db.Tables.AddRange(Enumerable.Range(1, 10)
@@ -84,7 +82,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// 全域錯誤處理（回傳 JSON 錯誤訊息，方便除錯）
+// 全域錯誤處理
 app.UseExceptionHandler(errorApp =>
 {
     errorApp.Run(async context =>
@@ -101,7 +99,6 @@ app.UseExceptionHandler(errorApp =>
     });
 });
 
-// 健康檢查端點（不需要 DB）
 app.MapGet("/health", () => Results.Ok(new { status = "ok", time = DateTime.UtcNow }));
 
 app.UseCors();
@@ -111,7 +108,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// 讓 /admin 直接導向 /admin/index.html
 app.MapGet("/admin", () => Results.Redirect("/admin/index.html"));
 
 app.Run();
