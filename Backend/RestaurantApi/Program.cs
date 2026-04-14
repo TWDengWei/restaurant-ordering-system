@@ -20,8 +20,7 @@ var connectionString = (dbHost != null && dbName != null && dbUser != null && db
     : builder.Configuration.GetConnectionString("DefaultConnection")!;
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connectionString, npgsqlOptions =>
-        npgsqlOptions.EnableRetryOnFailure(3)));
+    options.UseNpgsql(connectionString));
 
 // ── JWT 驗證 ─────────────────────────────────────────────
 var jwtSecret = builder.Configuration["JwtSettings:Secret"]!;
@@ -102,9 +101,10 @@ app.UseExceptionHandler(errorApp =>
         context.Response.StatusCode = 500;
         context.Response.ContentType = "application/json";
         var feature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
-        var msg = feature?.Error?.Message ?? "Internal server error";
+        var ex  = feature?.Error;
+        var msg = ex?.InnerException?.Message ?? ex?.Message ?? "Internal server error";
         await context.Response.WriteAsync(
-            System.Text.Json.JsonSerializer.Serialize(new { error = msg }));
+            System.Text.Json.JsonSerializer.Serialize(new { error = msg, type = ex?.GetType().Name }));
     });
 });
 
