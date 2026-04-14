@@ -1,26 +1,27 @@
+using System.Net.Security;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 using RestaurantApi.Data;
 using RestaurantApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ── 資料庫 ──────────────────────────────────────────────
-// 優先從 Render 注入的個別 DB 環境變數組裝，回退到 appsettings
-var dbHost     = Environment.GetEnvironmentVariable("DB_HOST");
-var dbPort     = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
-var dbName     = Environment.GetEnvironmentVariable("DB_NAME");
-var dbUser     = Environment.GetEnvironmentVariable("DB_USER");
-var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")!;
 
-var connectionString = (dbHost != null && dbName != null && dbUser != null && dbPassword != null)
-    ? $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPassword};SSL Mode=Require;Trust Server Certificate=true"
-    : builder.Configuration.GetConnectionString("DefaultConnection")!;
+// NpgsqlDataSource：使用 SSL 並繞過憑證驗證（相容 Render PostgreSQL）
+var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+dataSourceBuilder.ConfigureSslClientAuthenticationOptions(sslOpts =>
+{
+    sslOpts.RemoteCertificateValidationCallback = (_, _, _, _) => true;
+});
+var dataSource = dataSourceBuilder.Build();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseNpgsql(dataSource));
 
 // ── JWT 驗證 ─────────────────────────────────────────────
 var jwtSecret = builder.Configuration["JwtSettings:Secret"]!;
