@@ -91,22 +91,24 @@ public class ReportController : ControllerBase
         var start = startDate?.ToDateTime(TimeOnly.MinValue) ?? twNow.AddDays(-30);
         var end   = endDate?.ToDateTime(TimeOnly.MaxValue)   ?? twNow;
 
-        var stats = await _db.OrderItems
+        // GroupBy + record constructor 無法被 EF Core 翻譯成 SQL，
+        // 改用匿名物件 Select 後再轉 DTO
+        var raw = await _db.OrderItems
             .Include(oi => oi.Order)
             .Where(oi => oi.Order!.Status == OrderStatus.Paid
                       && oi.Order.CreatedAt >= start
                       && oi.Order.CreatedAt <= end)
             .GroupBy(oi => new { oi.MenuItemId, oi.ItemName })
-            .Select(g => new MenuStatDto(
-                g.Key.MenuItemId ?? 0,
-                g.Key.ItemName,
-                g.Sum(oi => oi.Quantity),
-                g.Sum(oi => oi.ItemPrice * oi.Quantity)
-            ))
+            .Select(g => new {
+                MenuItemId    = g.Key.MenuItemId ?? 0,
+                ItemName      = g.Key.ItemName,
+                TotalQuantity = g.Sum(oi => oi.Quantity),
+                TotalRevenue  = g.Sum(oi => (decimal)oi.ItemPrice * oi.Quantity)
+            })
             .OrderByDescending(s => s.TotalQuantity)
             .Take(20)
             .ToListAsync();
 
-        return Ok(stats);
+        return Ok(raw.Select(s => new MenuStatDto(s.MenuItemId, s.ItemName, s.TotalQuantity, s.TotalRevenue)));
     }
 }
