@@ -101,10 +101,12 @@ app.UseExceptionHandler(errorApp =>
         context.Response.StatusCode = 500;
         context.Response.ContentType = "application/json";
         var feature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
-        var ex  = feature?.Error;
-        var msg = ex?.InnerException?.Message ?? ex?.Message ?? "Internal server error";
+        var ex = feature?.Error;
+        var msgs = new System.Collections.Generic.List<string>();
+        var cur = ex;
+        while (cur != null) { msgs.Add($"[{cur.GetType().Name}] {cur.Message}"); cur = cur.InnerException; }
         await context.Response.WriteAsync(
-            System.Text.Json.JsonSerializer.Serialize(new { error = msg, type = ex?.GetType().Name }));
+            System.Text.Json.JsonSerializer.Serialize(new { errors = msgs }));
     });
 });
 
