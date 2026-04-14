@@ -79,8 +79,10 @@ public class OrderController : ControllerBase
 
         if (date.HasValue)
         {
-            var start = date.Value.ToDateTime(TimeOnly.MinValue);
-            var end = date.Value.ToDateTime(TimeOnly.MaxValue);
+            // CreatedAt 存 UTC；前端傳本地日期，轉成 UTC 區間（台灣 UTC+8 → 前一天 16:00 ~ 當天 15:59:59 UTC）
+            var localOffset = TimeSpan.FromHours(8); // Asia/Taipei
+            var start = date.Value.ToDateTime(TimeOnly.MinValue) - localOffset;
+            var end   = date.Value.ToDateTime(TimeOnly.MaxValue) - localOffset;
             query = query.Where(o => o.CreatedAt >= start && o.CreatedAt <= end);
         }
 

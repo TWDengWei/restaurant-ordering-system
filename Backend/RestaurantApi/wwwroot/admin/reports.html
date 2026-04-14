@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>報表與 QR 碼 - 餐飲管理系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <style>@media print { body > aside, body > main > h1, body > main > div:first-child { display: none; } }</style>
 </head>
 <body class="bg-gray-100 min-h-screen flex">
@@ -54,6 +53,7 @@
       <div id="qr-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <div class="text-gray-400 text-sm text-center col-span-full py-8">載入中...</div>
       </div>
+      <p class="text-xs text-gray-400 mt-4">* QR 碼由 api.qrserver.com 產生，需要網路連線</p>
     </div>
 
     <!-- Daily Report Tab -->
@@ -144,36 +144,48 @@
 
     // QR Code generation
     async function loadQRCodes() {
-      const res = await fetch(`${API}/api/tables`, { headers: { Authorization: `Bearer ${token}` } });
-      const tables = await res.json();
-      const grid = document.getElementById('qr-grid');
-      grid.innerHTML = tables.map(t => `
-        <div class="bg-white rounded-xl shadow-sm p-4 flex flex-col items-center text-center">
-          <div class="font-semibold text-gray-700 mb-2">${t.name}</div>
-          <canvas id="qr-${t.id}" class="mb-2"></canvas>
-          <div class="text-xs text-gray-400 break-all mb-2">/order/?table=${t.id}</div>
-          <button onclick="downloadQR(${t.id}, '${t.name}')"
-            class="text-xs bg-orange-50 text-orange-600 px-3 py-1 rounded-lg hover:bg-orange-100 transition">
-            下載
-          </button>
-        </div>
-      `).join('');
+      try {
+        const res = await fetch(`${API}/api/tables`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) throw new Error(`API 錯誤：${res.status}`);
+        const tables = await res.json();
+        const grid = document.getElementById('qr-grid');
 
-      for (const t of tables) {
-        const url = `${baseUrl}/order/?table=${t.id}`;
-        await QRCode.toCanvas(document.getElementById(`qr-${t.id}`), url, {
-          width: 120, margin: 1,
-          color: { dark: '#1f2937', light: '#ffffff' }
+        if (!tables.length) {
+          grid.innerHTML = '<div class="text-gray-400 text-sm text-center col-span-full py-8">尚無桌位資料</div>';
+          return;
+        }
+
+        grid.innerHTML = tables.map(t => {
+          const orderUrl = `${baseUrl}/order/?table=${t.id}`;
+          const encoded  = encodeURIComponent(orderUrl);
+          const qrSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=6&data=${encoded}`;
+          const dlSrc    = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encoded}`;
+          return `
+            <div class="bg-white rounded-xl shadow-sm p-4 flex flex-col items-center text-center">
+              <div class="font-semibold text-gray-700 mb-3">${t.name}</div>
+              <img id="qrimg-${t.id}" src="${qrSrc}" alt="QR ${t.name}"
+                class="mb-2 border border-gray-100 rounded" style="width:160px;height:160px">
+              <div class="text-xs text-gray-400 mb-3">桌位 ${t.id}</div>
+              <a href="${dlSrc}" target="_blank"
+                class="text-xs bg-orange-50 text-orange-600 px-3 py-1 rounded-lg hover:bg-orange-100 transition">
+                下載大圖
+              </a>
+            </div>
+          `;
+        }).join('');
+
+        // 圖片載入失敗時顯示提示
+        tables.forEach(t => {
+          const img = document.getElementById(`qrimg-${t.id}`);
+          if (img) img.onerror = function() {
+            this.style.display = 'none';
+            this.insertAdjacentHTML('afterend', '<div class="text-red-400 text-xs py-6">QR 圖片載入失敗<br>請確認網路連線</div>');
+          };
         });
+      } catch (err) {
+        document.getElementById('qr-grid').innerHTML =
+          `<div class="text-red-400 text-sm text-center col-span-full py-8">載入失敗：${err.message}</div>`;
       }
-    }
-
-    function downloadQR(tableId, tableName) {
-      const canvas = document.getElementById(`qr-${tableId}`);
-      const link = document.createElement('a');
-      link.download = `QR_${tableName}.png`;
-      link.href = canvas.toDataURL();
-      link.click();
     }
 
     // Daily Report

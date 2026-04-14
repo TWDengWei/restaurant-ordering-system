@@ -99,8 +99,8 @@
     if (!token) window.location.href = '/admin/index.html';
     document.getElementById('admin-name').textContent = localStorage.getItem('username') || '';
 
-    // 預設今天
-    document.getElementById('filter-date').value = new Date().toISOString().split('T')[0];
+    // 預設今天（用本地日期，避免 UTC+8 跨日問題）
+    document.getElementById('filter-date').value = new Date().toLocaleDateString('en-CA');
 
     const statusColors = {
       Pending:   'border-l-4 border-yellow-400',
@@ -189,16 +189,22 @@
     }
 
     async function doAction(url, method) {
-      const res = await fetch(url, {
-        method,
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        alert(d.message || '操作失敗');
-        return;
+      try {
+        const res = await fetch(url, {
+          method,
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.status === 401) { logout(); return; }
+        if (!res.ok) {
+          let msg = '操作失敗';
+          try { const d = await res.json(); msg = d.message || msg; } catch (_) {}
+          alert(msg);
+          return;
+        }
+        loadOrders();
+      } catch (e) {
+        alert('網路錯誤，請重試');
       }
-      loadOrders();
     }
 
     async function printOrder(id) {

@@ -99,21 +99,51 @@
           return;
         }
         container.innerHTML = data.recentOrders.map(o => `
-          <div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 border border-gray-100">
-            <div class="flex items-center gap-3">
-              <span class="font-medium text-gray-700">#${o.id}</span>
-              <span class="text-gray-600">${o.tableName}</span>
-              <span class="text-sm text-gray-400">${o.itemCount} 項</span>
+          <div class="py-2 px-3 rounded-lg hover:bg-gray-50 border border-gray-100">
+            <div class="flex items-center justify-between mb-1">
+              <div class="flex items-center gap-2">
+                <span class="font-medium text-gray-700">#${o.id}</span>
+                <span class="text-gray-600">${o.tableName}</span>
+                <span class="text-sm text-gray-400">${o.itemCount} 項</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-medium text-gray-700">NT$ ${o.totalAmount}</span>
+                <span class="text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[o.status] || 'bg-gray-100 text-gray-500'}">${o.statusLabel}</span>
+                <span class="text-xs text-gray-400">${new Date(o.createdAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
             </div>
-            <div class="flex items-center gap-3">
-              <span class="text-sm font-medium text-gray-700">NT$ ${o.totalAmount}</span>
-              <span class="text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[o.status] || 'bg-gray-100 text-gray-500'}">${o.statusLabel}</span>
-              <span class="text-xs text-gray-400">${new Date(o.createdAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}</span>
+            <div class="flex gap-2 mt-1">
+              ${o.status === 'Pending' ? `
+                <button onclick="quickAction(${o.id},'confirm')" class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg transition">確認訂單</button>
+              ` : ''}
+              ${(o.status === 'Confirmed' || o.status === 'Unpaid') ? `
+                <button onclick="quickAction(${o.id},'pay')" class="text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg transition">結帳</button>
+              ` : ''}
+              ${['Pending','Confirmed','Unpaid'].includes(o.status) ? `
+                <button onclick="quickAction(${o.id},'cancel')" class="text-xs bg-red-100 hover:bg-red-200 text-red-600 px-3 py-1 rounded-lg transition">取消</button>
+              ` : ''}
             </div>
           </div>
         `).join('');
       } catch (e) {
         console.error(e);
+      }
+    }
+
+    async function quickAction(id, action) {
+      const labels = { confirm: '確認訂單', pay: '結帳', cancel: '取消訂單' };
+      if (action === 'pay' && !confirm('確認結帳？')) return;
+      if (action === 'cancel' && !confirm('確定取消此訂單？')) return;
+      try {
+        const res = await fetch(`${API}/api/orders/${id}/${action}`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const d = await res.json();
+        if (!res.ok) { alert(d.message || '操作失敗'); return; }
+        load(); // 刷新儀表板
+      } catch (e) {
+        alert('網路錯誤，請重試');
       }
     }
 
@@ -124,7 +154,7 @@
     }
 
     load();
-    setInterval(load, 30000);
+    setInterval(load, 15000);
   </script>
 </body>
 </html>
