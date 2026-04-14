@@ -140,50 +140,64 @@
         return;
       }
       c.innerHTML = orders.map(o => `
-        <div class="bg-white rounded-xl shadow-sm p-4 ${statusColors[o.status] || ''}">
-          <div class="flex items-center justify-between mb-1">
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden ${statusColors[o.status] || ''}">
+          <!-- 標題列（點擊折疊） -->
+          <div class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 transition"
+            onclick="toggleDetail('ord-${o.id}')">
             <div class="flex items-center gap-2">
               <span class="font-bold text-gray-800">#${o.id}</span>
               <span class="font-medium text-gray-700">${o.tableName}</span>
+              <span class="text-xs text-gray-400">${new Date(o.createdAt).toLocaleString('zh-TW')}</span>
             </div>
-            <span class="text-xs px-2 py-0.5 rounded-full font-medium ${badgeColors[o.status] || ''}">${o.statusLabel}</span>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-gray-800">NT$ ${o.totalAmount}</span>
+              <span class="text-xs px-2 py-0.5 rounded-full font-medium ${badgeColors[o.status] || ''}">${o.statusLabel}</span>
+              <span id="icon-ord-${o.id}" class="text-gray-400 text-xs">▼</span>
+            </div>
           </div>
-          <div class="text-xs text-gray-400 mb-2">${new Date(o.createdAt).toLocaleString('zh-TW')}</div>
-
-          <!-- 訂單細項 -->
-          <div class="bg-gray-50 rounded-lg px-3 py-2 mb-3 space-y-1">
-            ${(o.items || []).map(i => `
-              <div class="flex justify-between text-sm">
-                <span class="text-gray-700">${i.itemName} <span class="text-gray-400">× ${i.quantity}</span></span>
-                <span class="text-gray-600">NT$ ${i.subtotal}</span>
+          <!-- 折疊細項（預設隱藏） -->
+          <div id="detail-ord-${o.id}" class="hidden border-t border-gray-100 px-4 py-3 bg-gray-50">
+            <div class="space-y-1 mb-3">
+              ${(o.items || []).map(i => `
+                <div class="flex justify-between text-sm">
+                  <span class="text-gray-700">${i.itemName} <span class="text-gray-400">× ${i.quantity}</span></span>
+                  <span class="text-gray-600">NT$ ${i.subtotal}</span>
+                </div>
+                ${i.note ? `<div class="text-xs text-orange-500 pl-2">備註：${i.note}</div>` : ''}
+              `).join('')}
+              <div class="flex justify-between font-bold text-sm border-t border-gray-200 pt-1 mt-1">
+                <span class="text-gray-700">合計</span>
+                <span class="text-gray-800">NT$ ${o.totalAmount}</span>
               </div>
-              ${i.note ? `<div class="text-xs text-orange-500 pl-2">備註：${i.note}</div>` : ''}
-            `).join('')}
-            <div class="flex justify-between font-bold text-sm border-t border-gray-200 pt-1 mt-1">
-              <span class="text-gray-700">合計</span>
-              <span class="text-gray-800">NT$ ${o.totalAmount}</span>
+              ${o.note ? `<div class="text-xs text-blue-500 mt-1">訂單備註：${o.note}</div>` : ''}
             </div>
-            ${o.note ? `<div class="text-xs text-blue-500 mt-1">訂單備註：${o.note}</div>` : ''}
-          </div>
-
-          <div class="flex flex-wrap gap-2">
-            ${o.status === 'Pending' ? `
-              <button onclick="confirmOrder(${o.id})" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-xs py-1.5 rounded-lg transition">確認訂單</button>
-            ` : ''}
-            ${o.status === 'Confirmed' ? `
-              <button onclick="setDining(${o.id})" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white text-xs py-1.5 rounded-lg transition">標記用餐中</button>
-              <button onclick="payOrder(${o.id})" class="flex-1 bg-green-500 hover:bg-green-600 text-white text-xs py-1.5 rounded-lg transition">結帳</button>
-            ` : ''}
-            ${o.status === 'Unpaid' ? `
-              <button onclick="payOrder(${o.id})" class="flex-1 bg-green-500 hover:bg-green-600 text-white text-xs py-1.5 rounded-lg transition">結帳</button>
-            ` : ''}
-            ${['Pending','Confirmed','Unpaid'].includes(o.status) ? `
-              <button onclick="cancelOrder(${o.id})" class="bg-red-100 hover:bg-red-200 text-red-600 text-xs py-1.5 px-3 rounded-lg transition">取消</button>
-            ` : ''}
-            <button onclick="printOrder(${o.id})" class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs py-1.5 px-3 rounded-lg transition">列印</button>
+            <div class="flex flex-wrap gap-2">
+              ${o.status === 'Pending' ? `
+                <button onclick="confirmOrder(${o.id})" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-xs py-1.5 rounded-lg transition">確認訂單</button>
+              ` : ''}
+              ${o.status === 'Confirmed' ? `
+                <button onclick="setDining(${o.id})" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white text-xs py-1.5 rounded-lg transition">標記用餐中</button>
+                <button onclick="payOrder(${o.id})" class="flex-1 bg-green-500 hover:bg-green-600 text-white text-xs py-1.5 rounded-lg transition">結帳</button>
+              ` : ''}
+              ${o.status === 'Unpaid' ? `
+                <button onclick="payOrder(${o.id})" class="flex-1 bg-green-500 hover:bg-green-600 text-white text-xs py-1.5 rounded-lg transition">結帳</button>
+              ` : ''}
+              ${['Pending','Confirmed','Unpaid'].includes(o.status) ? `
+                <button onclick="cancelOrder(${o.id})" class="bg-red-100 hover:bg-red-200 text-red-600 text-xs py-1.5 px-3 rounded-lg transition">取消</button>
+              ` : ''}
+              <button onclick="printOrder(${o.id})" class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs py-1.5 px-3 rounded-lg transition">列印</button>
+            </div>
           </div>
         </div>
       `).join('');
+    }
+
+    function toggleDetail(key) {
+      const el   = document.getElementById(`detail-${key}`);
+      const icon = document.getElementById(`icon-${key}`);
+      if (!el) return;
+      const hidden = el.classList.toggle('hidden');
+      icon.textContent = hidden ? '▼' : '▲';
     }
 
     async function confirmOrder(id) {
@@ -221,6 +235,9 @@
     }
 
     async function printOrder(id) {
+      // 展開細項以便列印時可見
+      const detail = document.getElementById(`detail-ord-${id}`);
+      if (detail) detail.classList.remove('hidden');
       const res = await fetch(`${API}/api/orders/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -238,17 +255,6 @@
       document.getElementById('p-total').textContent = `NT$ ${o.totalAmount}`;
 
       window.print();
-    }
-
-    async function showDetail(id) {
-      const res = await fetch(`${API}/api/orders/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const o = await res.json();
-      const items = o.items.map(i =>
-        `  ${i.itemName} × ${i.quantity}  NT$ ${i.subtotal}${i.note ? '\n  備註：' + i.note : ''}`
-      ).join('\n');
-      alert(`訂單 #${o.id} - ${o.tableName}\n狀態：${o.statusLabel}\n\n${items}\n\n合計：NT$ ${o.totalAmount}${o.note ? '\n訂單備註：' + o.note : ''}`);
     }
 
     function logout() {

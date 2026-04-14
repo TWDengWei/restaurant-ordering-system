@@ -123,9 +123,10 @@ public class MenuController : ControllerBase
         var item = await _db.MenuItems.FindAsync(id);
         if (item == null) return NotFound();
 
-        _db.MenuItems.Remove(item);
+        // 軟刪除：下架菜品，保留歷史報表關聯
+        item.IsAvailable = false;
         await _db.SaveChangesAsync();
-        return Ok(new { message = "菜品已刪除" });
+        return Ok(new { message = "菜品已下架", isAvailable = false });
     }
 
     private static MenuItemDto ToDto(MenuItem m, string? categoryName) =>

@@ -60,12 +60,9 @@ public class CategoryController : ControllerBase
         var category = await _db.Categories.FindAsync(id);
         if (category == null) return NotFound();
 
-        var hasItems = await _db.MenuItems.AnyAsync(m => m.CategoryId == id);
-        if (hasItems)
-            return BadRequest(new { message = "此分類下仍有菜品，請先移除或移動菜品" });
-
-        _db.Categories.Remove(category);
+        // 軟刪除：停用分類，保留歷史報表關聯
+        category.IsActive = false;
         await _db.SaveChangesAsync();
-        return Ok(new { message = "分類已刪除" });
+        return Ok(new { message = "分類已停用" });
     }
 }

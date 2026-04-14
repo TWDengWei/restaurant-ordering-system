@@ -100,8 +100,10 @@
           return;
         }
         container.innerHTML = data.recentOrders.map(o => `
-          <div class="border border-gray-100 rounded-xl p-3 hover:bg-gray-50 transition">
-            <div class="flex items-center justify-between mb-1">
+          <div class="border border-gray-100 rounded-xl overflow-hidden">
+            <!-- 標題列（點擊折疊） -->
+            <div class="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-gray-50 transition"
+              onclick="toggleDetail('db-${o.id}')">
               <div class="flex items-center gap-2">
                 <span class="font-bold text-gray-800">#${o.id}</span>
                 <span class="text-gray-600">${o.tableName}</span>
@@ -110,34 +112,45 @@
               <div class="flex items-center gap-2">
                 <span class="font-semibold text-gray-800">NT$ ${o.totalAmount}</span>
                 <span class="text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[o.status] || 'bg-gray-100 text-gray-500'}">${o.statusLabel}</span>
+                <span id="icon-db-${o.id}" class="text-gray-400 text-xs">▼</span>
               </div>
             </div>
-            <!-- 訂單細項 -->
-            <div class="text-xs text-gray-500 pl-1 mb-2 space-y-0.5">
-              ${(o.items || []).map(i => `
-                <div class="flex justify-between">
-                  <span>${i.itemName} × ${i.quantity}${i.note ? ' <span class="text-orange-400">(' + i.note + ')</span>' : ''}</span>
-                  <span>NT$ ${i.subtotal}</span>
-                </div>
-              `).join('')}
-              ${o.note ? `<div class="text-blue-400 mt-0.5">備註：${o.note}</div>` : ''}
-            </div>
-            <div class="flex gap-2">
-              ${o.status === 'Pending' ? `
-                <button onclick="quickAction(${o.id},'confirm')" class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg transition">確認訂單</button>
-              ` : ''}
-              ${(o.status === 'Confirmed' || o.status === 'Unpaid') ? `
-                <button onclick="quickAction(${o.id},'pay')" class="text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg transition">結帳</button>
-              ` : ''}
-              ${['Pending','Confirmed','Unpaid'].includes(o.status) ? `
-                <button onclick="quickAction(${o.id},'cancel')" class="text-xs bg-red-100 hover:bg-red-200 text-red-600 px-3 py-1 rounded-lg transition">取消</button>
-              ` : ''}
+            <!-- 折疊細項（預設隱藏） -->
+            <div id="detail-db-${o.id}" class="hidden border-t border-gray-100 px-3 py-2 bg-gray-50">
+              <div class="text-xs text-gray-500 space-y-0.5 mb-2">
+                ${(o.items || []).map(i => `
+                  <div class="flex justify-between">
+                    <span>${i.itemName} × ${i.quantity}${i.note ? ' <span class="text-orange-400">('+i.note+')</span>' : ''}</span>
+                    <span>NT$ ${i.subtotal}</span>
+                  </div>
+                `).join('')}
+                ${o.note ? `<div class="text-blue-400 mt-1">備註：${o.note}</div>` : ''}
+              </div>
+              <div class="flex gap-2">
+                ${o.status === 'Pending' ? `
+                  <button onclick="quickAction(${o.id},'confirm')" class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg transition">確認訂單</button>
+                ` : ''}
+                ${(o.status === 'Confirmed' || o.status === 'Unpaid') ? `
+                  <button onclick="quickAction(${o.id},'pay')" class="text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg transition">結帳</button>
+                ` : ''}
+                ${['Pending','Confirmed','Unpaid'].includes(o.status) ? `
+                  <button onclick="quickAction(${o.id},'cancel')" class="text-xs bg-red-100 hover:bg-red-200 text-red-600 px-3 py-1 rounded-lg transition">取消</button>
+                ` : ''}
+              </div>
             </div>
           </div>
         `).join('');
       } catch (e) {
         console.error(e);
       }
+    }
+
+    function toggleDetail(key) {
+      const el   = document.getElementById(`detail-${key}`);
+      const icon = document.getElementById(`icon-${key}`);
+      if (!el) return;
+      const hidden = el.classList.toggle('hidden');
+      icon.textContent = hidden ? '▼' : '▲';
     }
 
     async function quickAction(id, action) {

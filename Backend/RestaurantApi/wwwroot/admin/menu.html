@@ -260,7 +260,7 @@
     }
 
     async function deleteCategory(id) {
-      if (!confirm('確定刪除此分類？')) return;
+      if (!confirm('確定停用此分類？（不會真正刪除，可透過編輯重新啟用）')) return;
       const res = await fetch(`${API}/api/categories/${id}`, {
         method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
       });
@@ -347,11 +347,11 @@
     }
 
     async function deleteItem(id) {
-      if (!confirm('確定刪除此菜品？')) return;
+      if (!confirm('確定下架此菜品？（不會真正刪除，可透過編輯重新上架）')) return;
       const res = await fetch(`${API}/api/menu/${id}`, {
         method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
       });
-      if (!res.ok) { alert('刪除失敗'); return; }
+      if (!res.ok) { alert('操作失敗'); return; }
       await loadItems();
       await loadCategories();
     }
