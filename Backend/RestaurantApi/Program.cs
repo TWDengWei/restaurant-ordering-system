@@ -5,6 +5,9 @@ using Microsoft.IdentityModel.Tokens;
 using RestaurantApi.Data;
 using RestaurantApi.Models;
 
+// ── Npgsql: 允許 DateTimeKind.Unspecified，並統一以台灣時間(UTC+8)儲存 ──
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // ── 資料庫 ──────────────────────────────────────────────

@@ -17,7 +17,7 @@ public class Order
     public OrderStatus Status { get; set; } = OrderStatus.Pending;
     public decimal TotalAmount { get; set; }
     public string? Note { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow.AddHours(8);
     public DateTime? ConfirmedAt { get; set; }
     public DateTime? PaidAt { get; set; }
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();

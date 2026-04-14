@@ -19,7 +19,7 @@ public class DashboardController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Get()
     {
-        var today = DateTime.UtcNow.Date;
+        var today    = DateTime.UtcNow.AddHours(8).Date; // 台灣今天 00:00
         var tomorrow = today.AddDays(1);
 
         var todayOrders = await _db.Orders

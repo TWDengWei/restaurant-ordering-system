@@ -11,5 +11,5 @@ public class MenuItem
     public string? ImageBase64 { get; set; }
     public bool IsAvailable { get; set; } = true;
     public int SortOrder { get; set; } = 0;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow.AddHours(8);
 }

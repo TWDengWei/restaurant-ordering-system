@@ -79,15 +79,10 @@ public class OrderController : ControllerBase
 
         if (date.HasValue)
         {
-            // CreatedAt 存 UTC+0；前端傳台灣本地日期(UTC+8)，需轉成對應的 UTC 區間
-            const int tzOffsetHours = 8;
-            var startUtc = DateTime.SpecifyKind(
-                date.Value.ToDateTime(TimeOnly.MinValue).AddHours(-tzOffsetHours),
-                DateTimeKind.Utc);
-            var endUtc = DateTime.SpecifyKind(
-                date.Value.ToDateTime(TimeOnly.MaxValue).AddHours(-tzOffsetHours),
-                DateTimeKind.Utc);
-            query = query.Where(o => o.CreatedAt >= startUtc && o.CreatedAt <= endUtc);
+            // CreatedAt 已存台灣時間(UTC+8)，直接比對台灣日期即可
+            var start = date.Value.ToDateTime(TimeOnly.MinValue);
+            var end   = date.Value.ToDateTime(TimeOnly.MaxValue);
+            query = query.Where(o => o.CreatedAt >= start && o.CreatedAt <= end);
         }
 
         var orders = await query
@@ -122,7 +117,7 @@ public class OrderController : ControllerBase
             return BadRequest(new { message = "只能確認待確認狀態的訂單" });
 
         order.Status = OrderStatus.Confirmed;
-        order.ConfirmedAt = DateTime.UtcNow;
+        order.ConfirmedAt = DateTime.UtcNow.AddHours(8);
         await _db.SaveChangesAsync();
         return Ok(new { message = "訂單已確認", status = "Confirmed" });
     }
@@ -153,7 +148,7 @@ public class OrderController : ControllerBase
             return BadRequest(new { message = "訂單狀態不可結帳" });
 
         order.Status = OrderStatus.Paid;
-        order.PaidAt = DateTime.UtcNow;
+        order.PaidAt = DateTime.UtcNow.AddHours(8);
         await _db.SaveChangesAsync();
         return Ok(new { message = "結帳完成", status = "Paid" });
     }

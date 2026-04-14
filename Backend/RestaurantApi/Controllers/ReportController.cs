@@ -19,9 +19,9 @@ public class ReportController : ControllerBase
     [HttpGet("daily")]
     public async Task<IActionResult> Daily([FromQuery] DateOnly? date)
     {
-        var target = date ?? DateOnly.FromDateTime(DateTime.UtcNow);
-        var start = target.ToDateTime(TimeOnly.MinValue);
-        var end = target.ToDateTime(TimeOnly.MaxValue);
+        var target = date ?? DateOnly.FromDateTime(DateTime.UtcNow.AddHours(8));
+        var start  = target.ToDateTime(TimeOnly.MinValue);
+        var end    = target.ToDateTime(TimeOnly.MaxValue);
 
         var orders = await _db.Orders
             .Where(o => o.CreatedAt >= start && o.CreatedAt <= end)
@@ -52,10 +52,11 @@ public class ReportController : ControllerBase
     [HttpGet("monthly")]
     public async Task<IActionResult> Monthly([FromQuery] int? year, [FromQuery] int? month)
     {
-        var y = year ?? DateTime.UtcNow.Year;
-        var m = month ?? DateTime.UtcNow.Month;
+        var twNow = DateTime.UtcNow.AddHours(8);
+        var y     = year  ?? twNow.Year;
+        var m     = month ?? twNow.Month;
         var start = new DateTime(y, m, 1);
-        var end = start.AddMonths(1);
+        var end   = start.AddMonths(1);
 
         var orders = await _db.Orders
             .Where(o => o.CreatedAt >= start && o.CreatedAt < end)
@@ -86,8 +87,9 @@ public class ReportController : ControllerBase
         [FromQuery] DateOnly? startDate,
         [FromQuery] DateOnly? endDate)
     {
-        var start = startDate?.ToDateTime(TimeOnly.MinValue) ?? DateTime.UtcNow.AddDays(-30);
-        var end = endDate?.ToDateTime(TimeOnly.MaxValue) ?? DateTime.UtcNow;
+        var twNow = DateTime.UtcNow.AddHours(8);
+        var start = startDate?.ToDateTime(TimeOnly.MinValue) ?? twNow.AddDays(-30);
+        var end   = endDate?.ToDateTime(TimeOnly.MaxValue)   ?? twNow;
 
         var stats = await _db.OrderItems
             .Include(oi => oi.Order)
