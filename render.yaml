@@ -4,6 +4,8 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: free
+    branch: master
+    autoDeploy: true
     envVars:
       # ⚠️ 在 Render Dashboard 的 Environment 頁面設定以下兩個變數：
       # ConnectionStrings__DefaultConnection  →  你的 MySQL 連線字串
