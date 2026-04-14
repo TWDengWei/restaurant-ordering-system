@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: restaurant-system
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      # ⚠️ 在 Render Dashboard 的 Environment 頁面設定以下兩個變數：
+      # ConnectionStrings__DefaultConnection  →  你的 MySQL 連線字串
+      # JwtSettings__Secret                  →  任意隨機字串（至少 32 字元）
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: JwtSettings__Secret
+        sync: false

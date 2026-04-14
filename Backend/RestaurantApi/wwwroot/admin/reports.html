@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>報表與 QR 碼 - 餐飲管理系統</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <style>@media print { body > aside, body > main > h1, body > main > div:first-child { display: none; } }</style>
+</head>
+<body class="bg-gray-100 min-h-screen flex">
+
+  <!-- Sidebar -->
+  <aside class="w-56 bg-gray-900 text-white flex flex-col min-h-screen fixed left-0 top-0 z-30">
+    <div class="p-5 border-b border-gray-700">
+      <div class="text-xl font-bold">🍽️ 餐飲管理</div>
+      <div class="text-xs text-gray-400 mt-1" id="admin-name"></div>
+    </div>
+    <nav class="flex-1 p-3 space-y-1">
+      <a href="dashboard.html" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition">📊 儀表板</a>
+      <a href="orders.html"   class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition">📋 訂單管理</a>
+      <a href="menu.html"     class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition">🍜 菜單管理</a>
+      <a href="reports.html"  class="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-600 text-white text-sm font-medium">📈 報表 & QR碼</a>
+    </nav>
+    <div class="p-3">
+      <button onclick="logout()" class="w-full px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-400 text-sm text-left transition">登出</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="ml-56 flex-1 p-6">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">報表 & QR 碼</h1>
+
+    <!-- Tabs -->
+    <div class="flex gap-2 mb-6">
+      <button onclick="showTab('qr')" id="tab-qr" class="px-4 py-2 rounded-lg text-sm font-medium bg-orange-500 text-white transition">QR 碼管理</button>
+      <button onclick="showTab('daily')" id="tab-daily" class="px-4 py-2 rounded-lg text-sm font-medium bg-white text-gray-600 hover:bg-gray-50 transition">每日報表</button>
+      <button onclick="showTab('monthly')" id="tab-monthly" class="px-4 py-2 rounded-lg text-sm font-medium bg-white text-gray-600 hover:bg-gray-50 transition">月報表</button>
+      <button onclick="showTab('menu-stats')" id="tab-menu-stats" class="px-4 py-2 rounded-lg text-sm font-medium bg-white text-gray-600 hover:bg-gray-50 transition">熱銷菜品</button>
+    </div>
+
+    <!-- QR Code Tab -->
+    <div id="panel-qr">
+      <div class="bg-white rounded-xl shadow-sm p-5 mb-4">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="font-semibold text-gray-700">桌位 QR 碼</h2>
+          <div class="text-sm text-gray-500">掃碼後開啟線上點餐</div>
+        </div>
+        <p class="text-xs text-gray-400 mb-4">客人掃描 QR 碼後，將直接進入對應桌位的點餐頁面</p>
+        <div id="base-url-info" class="bg-orange-50 border border-orange-100 rounded-lg px-4 py-2 text-sm text-orange-700 mb-4">
+          目前 QR 碼指向：<strong id="current-base-url"></strong>
+        </div>
+      </div>
+      <div id="qr-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div class="text-gray-400 text-sm text-center col-span-full py-8">載入中...</div>
+      </div>
+    </div>
+
+    <!-- Daily Report Tab -->
+    <div id="panel-daily" class="hidden">
+      <div class="bg-white rounded-xl shadow-sm p-5">
+        <div class="flex items-center gap-3 mb-5">
+          <input type="date" id="daily-date" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+          <button onclick="loadDaily()" class="bg-orange-500 hover:bg-orange-600 text-white text-sm px-4 py-1.5 rounded-lg transition">查詢</button>
+        </div>
+        <div id="daily-content">
+          <div class="text-gray-400 text-center py-8">請選擇日期查詢</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Monthly Report Tab -->
+    <div id="panel-monthly" class="hidden">
+      <div class="bg-white rounded-xl shadow-sm p-5">
+        <div class="flex items-center gap-3 mb-5">
+          <select id="monthly-year" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"></select>
+          <select id="monthly-month" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+            ${Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1} 月</option>`).join('')}
+          </select>
+          <button onclick="loadMonthly()" class="bg-orange-500 hover:bg-orange-600 text-white text-sm px-4 py-1.5 rounded-lg transition">查詢</button>
+        </div>
+        <div id="monthly-content">
+          <div class="text-gray-400 text-center py-8">請選擇月份查詢</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Menu Stats Tab -->
+    <div id="panel-menu-stats" class="hidden">
+      <div class="bg-white rounded-xl shadow-sm p-5">
+        <div class="flex items-center gap-3 mb-5 flex-wrap">
+          <div>
+            <label class="text-xs text-gray-500 block mb-1">起始日期</label>
+            <input type="date" id="stat-start" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 block mb-1">結束日期</label>
+            <input type="date" id="stat-end" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+          </div>
+          <button onclick="loadMenuStats()" class="mt-4 bg-orange-500 hover:bg-orange-600 text-white text-sm px-4 py-1.5 rounded-lg transition">查詢</button>
+        </div>
+        <div id="menu-stats-content">
+          <div class="text-gray-400 text-center py-8">請選擇日期範圍查詢</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const API = '';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/admin/index.html';
+    document.getElementById('admin-name').textContent = localStorage.getItem('username') || '';
+
+    const baseUrl = window.location.origin;
+    document.getElementById('current-base-url').textContent = baseUrl;
+
+    // Init date inputs
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('daily-date').value = today;
+
+    const nowDate = new Date();
+    // Monthly year options
+    const yearSel = document.getElementById('monthly-year');
+    for (let y = nowDate.getFullYear(); y >= nowDate.getFullYear() - 2; y--) {
+      yearSel.innerHTML += `<option value="${y}">${y} 年</option>`;
+    }
+    document.getElementById('monthly-month').innerHTML =
+      Array.from({length:12},(_,i)=>`<option value="${i+1}" ${i+1===nowDate.getMonth()+1?'selected':''}>${i+1} 月</option>`).join('');
+
+    // Stat date defaults (last 30 days)
+    const thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate()-30);
+    document.getElementById('stat-start').value = thirtyDaysAgo.toISOString().split('T')[0];
+    document.getElementById('stat-end').value = today;
+
+    function showTab(tab) {
+      ['qr','daily','monthly','menu-stats'].forEach(t => {
+        document.getElementById(`panel-${t}`).classList.add('hidden');
+        document.getElementById(`tab-${t}`).className = 'px-4 py-2 rounded-lg text-sm font-medium bg-white text-gray-600 hover:bg-gray-50 transition';
+      });
+      document.getElementById(`panel-${tab}`).classList.remove('hidden');
+      document.getElementById(`tab-${tab}`).className = 'px-4 py-2 rounded-lg text-sm font-medium bg-orange-500 text-white transition';
+    }
+
+    // QR Code generation
+    async function loadQRCodes() {
+      const res = await fetch(`${API}/api/tables`, { headers: { Authorization: `Bearer ${token}` } });
+      const tables = await res.json();
+      const grid = document.getElementById('qr-grid');
+      grid.innerHTML = tables.map(t => `
+        <div class="bg-white rounded-xl shadow-sm p-4 flex flex-col items-center text-center">
+          <div class="font-semibold text-gray-700 mb-2">${t.name}</div>
+          <canvas id="qr-${t.id}" class="mb-2"></canvas>
+          <div class="text-xs text-gray-400 break-all mb-2">/order/?table=${t.id}</div>
+          <button onclick="downloadQR(${t.id}, '${t.name}')"
+            class="text-xs bg-orange-50 text-orange-600 px-3 py-1 rounded-lg hover:bg-orange-100 transition">
+            下載
+          </button>
+        </div>
+      `).join('');
+
+      for (const t of tables) {
+        const url = `${baseUrl}/order/?table=${t.id}`;
+        await QRCode.toCanvas(document.getElementById(`qr-${t.id}`), url, {
+          width: 120, margin: 1,
+          color: { dark: '#1f2937', light: '#ffffff' }
+        });
+      }
+    }
+
+    function downloadQR(tableId, tableName) {
+      const canvas = document.getElementById(`qr-${tableId}`);
+      const link = document.createElement('a');
+      link.download = `QR_${tableName}.png`;
+      link.href = canvas.toDataURL();
+      link.click();
+    }
+
+    // Daily Report
+    async function loadDaily() {
+      const date = document.getElementById('daily-date').value;
+      const res = await fetch(`${API}/api/reports/daily?date=${date}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const d = await res.json();
+      document.getElementById('daily-content').innerHTML = `
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+          <div class="bg-green-50 rounded-xl p-4 text-center">
+            <div class="text-sm text-gray-500">營業額</div>
+            <div class="text-xl font-bold text-green-600">NT$ ${d.totalRevenue.toLocaleString()}</div>
+          </div>
+          <div class="bg-blue-50 rounded-xl p-4 text-center">
+            <div class="text-sm text-gray-500">總訂單</div>
+            <div class="text-xl font-bold text-blue-600">${d.totalOrders}</div>
+          </div>
+          <div class="bg-purple-50 rounded-xl p-4 text-center">
+            <div class="text-sm text-gray-500">已結帳</div>
+            <div class="text-xl font-bold text-purple-600">${d.paidOrders}</div>
+          </div>
+          <div class="bg-red-50 rounded-xl p-4 text-center">
+            <div class="text-sm text-gray-500">已取消</div>
+            <div class="text-xl font-bold text-red-500">${d.cancelledOrders}</div>
+          </div>
+        </div>
+        ${d.hourlyStats.length ? `
+          <h3 class="font-medium text-gray-700 mb-2">各時段訂單數</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="text-left text-gray-500 border-b">
+                <th class="pb-2">時段</th><th class="pb-2">訂單數</th><th class="pb-2">營業額</th>
+              </tr></thead>
+              <tbody>${d.hourlyStats.map(h=>`
+                <tr class="border-b border-gray-50">
+                  <td class="py-2">${String(h.hour).padStart(2,'0')}:00</td>
+                  <td class="py-2">${h.orderCount}</td>
+                  <td class="py-2">NT$ ${h.revenue}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : '<div class="text-gray-400 text-center py-4">此日無訂單</div>'}
+      `;
+    }
+
+    // Monthly Report
+    async function loadMonthly() {
+      const year = document.getElementById('monthly-year').value;
+      const month = document.getElementById('monthly-month').value;
+      const res = await fetch(`${API}/api/reports/monthly?year=${year}&month=${month}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const d = await res.json();
+      document.getElementById('monthly-content').innerHTML = `
+        <div class="grid grid-cols-2 gap-4 mb-5 max-w-sm">
+          <div class="bg-green-50 rounded-xl p-4 text-center">
+            <div class="text-sm text-gray-500">月營業額</div>
+            <div class="text-xl font-bold text-green-600">NT$ ${d.totalRevenue.toLocaleString()}</div>
+          </div>
+          <div class="bg-blue-50 rounded-xl p-4 text-center">
+            <div class="text-sm text-gray-500">月總訂單</div>
+            <div class="text-xl font-bold text-blue-600">${d.totalOrders}</div>
+          </div>
+        </div>
+        ${d.dailyStats.length ? `
+          <h3 class="font-medium text-gray-700 mb-2">每日明細</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="text-left text-gray-500 border-b">
+                <th class="pb-2">日期</th><th class="pb-2">訂單數</th><th class="pb-2">營業額</th>
+              </tr></thead>
+              <tbody>${d.dailyStats.map(s=>`
+                <tr class="border-b border-gray-50">
+                  <td class="py-2">${s.date}</td>
+                  <td class="py-2">${s.orderCount}</td>
+                  <td class="py-2">NT$ ${s.revenue.toLocaleString()}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : '<div class="text-gray-400 text-center py-4">此月無訂單</div>'}
+      `;
+    }
+
+    // Menu Stats
+    async function loadMenuStats() {
+      const start = document.getElementById('stat-start').value;
+      const end = document.getElementById('stat-end').value;
+      const res = await fetch(`${API}/api/reports/menu-stats?startDate=${start}&endDate=${end}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const stats = await res.json();
+      const el = document.getElementById('menu-stats-content');
+      if (!stats.length) { el.innerHTML = '<div class="text-gray-400 text-center py-8">此期間無銷售資料</div>'; return; }
+      el.innerHTML = `
+        <table class="w-full text-sm">
+          <thead><tr class="text-left text-gray-500 border-b">
+            <th class="pb-2">排名</th><th class="pb-2">菜品</th><th class="pb-2">銷售量</th><th class="pb-2">銷售額</th>
+          </tr></thead>
+          <tbody>${stats.map((s,i)=>`
+            <tr class="border-b border-gray-50">
+              <td class="py-2 font-bold text-gray-400">#${i+1}</td>
+              <td class="py-2 font-medium text-gray-800">${s.itemName}</td>
+              <td class="py-2 text-blue-600">${s.totalQuantity} 份</td>
+              <td class="py-2 text-green-600">NT$ ${s.totalRevenue.toLocaleString()}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      window.location.href = '/admin/index.html';
+    }
+
+    loadQRCodes();
+  </script>
+</body>
+</html>

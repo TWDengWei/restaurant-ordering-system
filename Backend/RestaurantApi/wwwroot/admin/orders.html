@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>訂單管理 - 餐飲管理系統</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media print {
+      body > * { display: none !important; }
+      #print-area { display: block !important; }
+    }
+    #print-area { display: none; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex">
+
+  <!-- Sidebar -->
+  <aside class="w-56 bg-gray-900 text-white flex flex-col min-h-screen fixed left-0 top-0 z-30">
+    <div class="p-5 border-b border-gray-700">
+      <div class="text-xl font-bold">🍽️ 餐飲管理</div>
+      <div class="text-xs text-gray-400 mt-1" id="admin-name"></div>
+    </div>
+    <nav class="flex-1 p-3 space-y-1">
+      <a href="dashboard.html" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition">📊 儀表板</a>
+      <a href="orders.html" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-600 text-white text-sm font-medium">📋 訂單管理</a>
+      <a href="menu.html" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition">🍜 菜單管理</a>
+      <a href="reports.html" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition">📈 報表 & QR碼</a>
+    </nav>
+    <div class="p-3">
+      <button onclick="logout()" class="w-full px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-400 text-sm text-left transition">登出</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="ml-56 flex-1 p-6">
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-2xl font-bold text-gray-800">訂單管理</h1>
+      <div class="flex items-center gap-2 text-sm text-gray-500">
+        自動更新中
+        <span class="w-2 h-2 rounded-full bg-green-400 inline-block animate-pulse"></span>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-xl shadow-sm p-4 mb-5 flex flex-wrap gap-3 items-center">
+      <div>
+        <label class="text-xs text-gray-500 block mb-1">狀態篩選</label>
+        <select id="filter-status" onchange="loadOrders()"
+          class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+          <option value="">全部</option>
+          <option value="Pending">待確認</option>
+          <option value="Confirmed">進行中</option>
+          <option value="Unpaid">未結帳</option>
+          <option value="Paid">已結帳</option>
+          <option value="Cancelled">已取消</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 block mb-1">日期</label>
+        <input type="date" id="filter-date" onchange="loadOrders()"
+          class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+      </div>
+      <button onclick="loadOrders()"
+        class="mt-4 bg-orange-500 hover:bg-orange-600 text-white text-sm px-4 py-1.5 rounded-lg transition">
+        重新整理
+      </button>
+    </div>
+
+    <!-- Orders Grid -->
+    <div id="orders-container" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div class="col-span-full text-center text-gray-400 py-12">載入中...</div>
+    </div>
+  </main>
+
+  <!-- Print Area -->
+  <div id="print-area" class="p-6 max-w-xs mx-auto font-mono text-sm">
+    <div class="text-center border-b pb-3 mb-3">
+      <div class="text-lg font-bold">餐廳收據</div>
+      <div id="p-time"></div>
+    </div>
+    <div id="p-table" class="mb-2 font-bold"></div>
+    <div id="p-order-id" class="mb-3 text-gray-600"></div>
+    <div id="p-items" class="border-t pt-2 mb-2 space-y-1"></div>
+    <div class="border-t pt-2">
+      <div class="flex justify-between font-bold text-base">
+        <span>合計</span>
+        <span id="p-total"></span>
+      </div>
+    </div>
+    <div class="text-center text-xs text-gray-500 mt-4 border-t pt-3">
+      付款方式：現金<br>謝謝您的光臨！
+    </div>
+  </div>
+
+  <script>
+    const API = '';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/admin/index.html';
+    document.getElementById('admin-name').textContent = localStorage.getItem('username') || '';
+
+    // 預設今天
+    document.getElementById('filter-date').value = new Date().toISOString().split('T')[0];
+
+    const statusColors = {
+      Pending:   'border-l-4 border-yellow-400',
+      Confirmed: 'border-l-4 border-blue-400',
+      Unpaid:    'border-l-4 border-purple-400',
+      Paid:      'border-l-4 border-green-400',
+      Cancelled: 'border-l-4 border-gray-300 opacity-60'
+    };
+    const badgeColors = {
+      Pending:   'bg-yellow-100 text-yellow-700',
+      Confirmed: 'bg-blue-100 text-blue-700',
+      Unpaid:    'bg-purple-100 text-purple-700',
+      Paid:      'bg-green-100 text-green-700',
+      Cancelled: 'bg-gray-100 text-gray-500'
+    };
+
+    async function loadOrders() {
+      const status = document.getElementById('filter-status').value;
+      const date   = document.getElementById('filter-date').value;
+      let url = `${API}/api/orders?`;
+      if (status) url += `status=${status}&`;
+      if (date)   url += `date=${date}`;
+
+      try {
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        if (res.status === 401) { logout(); return; }
+        const orders = await res.json();
+        renderOrders(orders);
+      } catch (e) { console.error(e); }
+    }
+
+    function renderOrders(orders) {
+      const c = document.getElementById('orders-container');
+      if (!orders.length) {
+        c.innerHTML = '<div class="col-span-full text-center text-gray-400 py-12">此條件下沒有訂單</div>';
+        return;
+      }
+      c.innerHTML = orders.map(o => `
+        <div class="bg-white rounded-xl shadow-sm p-4 ${statusColors[o.status] || ''}">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-gray-800">#${o.id}</span>
+              <span class="font-medium text-gray-700">${o.tableName}</span>
+            </div>
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium ${badgeColors[o.status] || ''}">${o.statusLabel}</span>
+          </div>
+          <div class="text-xs text-gray-400 mb-3">${new Date(o.createdAt).toLocaleString('zh-TW')}</div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-gray-600 text-sm">${o.itemCount} 項商品</span>
+            <span class="font-bold text-gray-800">NT$ ${o.totalAmount}</span>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            ${o.status === 'Pending' ? `
+              <button onclick="confirmOrder(${o.id})" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-xs py-1.5 rounded-lg transition">確認訂單</button>
+            ` : ''}
+            ${o.status === 'Confirmed' ? `
+              <button onclick="setDining(${o.id})" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white text-xs py-1.5 rounded-lg transition">標記用餐中</button>
+              <button onclick="payOrder(${o.id})" class="flex-1 bg-green-500 hover:bg-green-600 text-white text-xs py-1.5 rounded-lg transition">結帳</button>
+            ` : ''}
+            ${o.status === 'Unpaid' ? `
+              <button onclick="payOrder(${o.id})" class="flex-1 bg-green-500 hover:bg-green-600 text-white text-xs py-1.5 rounded-lg transition">結帳</button>
+            ` : ''}
+            ${['Pending','Confirmed','Unpaid'].includes(o.status) ? `
+              <button onclick="cancelOrder(${o.id})" class="bg-red-100 hover:bg-red-200 text-red-600 text-xs py-1.5 px-3 rounded-lg transition">取消</button>
+            ` : ''}
+            <button onclick="printOrder(${o.id})" class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs py-1.5 px-3 rounded-lg transition">列印</button>
+            <button onclick="showDetail(${o.id})" class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs py-1.5 px-3 rounded-lg transition">明細</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function confirmOrder(id) {
+      await doAction(`${API}/api/orders/${id}/confirm`, 'PUT');
+    }
+    async function setDining(id) {
+      await doAction(`${API}/api/orders/${id}/dining`, 'PUT');
+    }
+    async function payOrder(id) {
+      if (!confirm('確認結帳？')) return;
+      await doAction(`${API}/api/orders/${id}/pay`, 'PUT');
+    }
+    async function cancelOrder(id) {
+      if (!confirm('確定取消此訂單？')) return;
+      await doAction(`${API}/api/orders/${id}/cancel`, 'PUT');
+    }
+
+    async function doAction(url, method) {
+      const res = await fetch(url, {
+        method,
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        alert(d.message || '操作失敗');
+        return;
+      }
+      loadOrders();
+    }
+
+    async function printOrder(id) {
+      const res = await fetch(`${API}/api/orders/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const o = await res.json();
+
+      document.getElementById('p-time').textContent = new Date(o.createdAt).toLocaleString('zh-TW');
+      document.getElementById('p-table').textContent = o.tableName;
+      document.getElementById('p-order-id').textContent = `訂單編號：#${o.id}`;
+      document.getElementById('p-items').innerHTML = o.items.map(i =>
+        `<div class="flex justify-between">
+          <span>${i.itemName} × ${i.quantity}</span>
+          <span>NT$ ${i.subtotal}</span>
+        </div>${i.note ? `<div class="text-xs text-gray-500 pl-2">備註：${i.note}</div>` : ''}`
+      ).join('');
+      document.getElementById('p-total').textContent = `NT$ ${o.totalAmount}`;
+
+      window.print();
+    }
+
+    async function showDetail(id) {
+      const res = await fetch(`${API}/api/orders/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const o = await res.json();
+      const items = o.items.map(i =>
+        `  ${i.itemName} × ${i.quantity}  NT$ ${i.subtotal}${i.note ? '\n  備註：' + i.note : ''}`
+      ).join('\n');
+      alert(`訂單 #${o.id} - ${o.tableName}\n狀態：${o.statusLabel}\n\n${items}\n\n合計：NT$ ${o.totalAmount}${o.note ? '\n訂單備註：' + o.note : ''}`);
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      window.location.href = '/admin/index.html';
+    }
+
+    loadOrders();
+    setInterval(loadOrders, 15000);
+  </script>
+</body>
+</html>

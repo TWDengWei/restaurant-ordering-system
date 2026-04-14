@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>線上點餐</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { overscroll-behavior: none; }
+    .category-tab.active { color: #f97316; border-bottom: 2px solid #f97316; }
+    .item-card:active { transform: scale(0.98); }
+    #cart-sheet { transition: transform 0.3s ease; }
+    .qty-btn:active { transform: scale(0.9); }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen pb-24">
+
+  <!-- Header -->
+  <header class="bg-white shadow-sm sticky top-0 z-20">
+    <div class="flex items-center justify-between px-4 py-3">
+      <div>
+        <div class="text-lg font-bold text-gray-800">線上點餐</div>
+        <div class="text-xs text-orange-500" id="table-name">載入桌位中...</div>
+      </div>
+      <button onclick="toggleCart()"
+        class="relative bg-orange-500 text-white p-2.5 rounded-full shadow-md active:scale-95 transition">
+        🛒
+        <span id="cart-badge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold"></span>
+      </button>
+    </div>
+    <!-- Category Tabs -->
+    <div id="category-tabs" class="flex overflow-x-auto gap-0 px-2 pb-0 scrollbar-hide">
+      <div class="text-gray-400 text-sm px-4 py-2">載入中...</div>
+    </div>
+  </header>
+
+  <!-- Menu Content -->
+  <div id="menu-content" class="px-4 py-4">
+    <div class="text-center text-gray-400 py-20">載入菜單中...</div>
+  </div>
+
+  <!-- Cart Bottom Sheet -->
+  <div id="cart-overlay" class="hidden fixed inset-0 bg-black/40 z-30" onclick="toggleCart()"></div>
+  <div id="cart-sheet" class="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-40 max-h-[80vh] flex flex-col translate-y-full">
+    <div class="p-4 border-b flex items-center justify-between">
+      <h2 class="font-bold text-gray-800 text-lg">購物車</h2>
+      <button onclick="toggleCart()" class="text-gray-400 hover:text-gray-600">✕</button>
+    </div>
+    <div id="cart-items" class="flex-1 overflow-y-auto p-4 space-y-3">
+      <div class="text-center text-gray-400 py-8">購物車是空的</div>
+    </div>
+    <div class="p-4 border-t">
+      <div class="mb-2">
+        <input id="order-note" type="text" placeholder="整份訂單備註（可不填）"
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+      </div>
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-gray-600">合計</span>
+        <span class="text-xl font-bold text-orange-600">NT$ <span id="cart-total">0</span></span>
+      </div>
+      <button onclick="submitOrder()" id="submit-btn"
+        class="w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-semibold py-3 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed">
+        送出訂單
+      </button>
+    </div>
+  </div>
+
+  <!-- Success Screen -->
+  <div id="success-screen" class="hidden fixed inset-0 bg-white z-50 flex items-center justify-center flex-col p-8">
+    <div class="text-6xl mb-4">🎉</div>
+    <h2 class="text-2xl font-bold text-gray-800 mb-2">訂單已送出！</h2>
+    <p class="text-gray-500 text-center mb-2">訂單編號：<strong id="success-order-id" class="text-orange-600"></strong></p>
+    <p class="text-gray-500 text-center mb-2">合計：<strong id="success-total" class="text-orange-600"></strong></p>
+    <p class="text-gray-400 text-sm text-center mb-8">請至櫃台確認訂單，我們將儘快為您準備</p>
+    <button onclick="resetOrder()"
+      class="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-xl font-semibold transition">
+      繼續點餐
+    </button>
+  </div>
+
+  <!-- Note Modal -->
+  <div id="note-modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-end justify-center">
+    <div class="bg-white w-full rounded-t-2xl p-5 pb-8">
+      <h3 class="font-bold text-gray-800 mb-3" id="note-item-name">備註</h3>
+      <input id="note-input" type="text" placeholder="例如：不要辣、少鹽..."
+        class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 mb-3">
+      <button onclick="confirmNote()" class="w-full bg-orange-500 text-white py-3 rounded-xl font-semibold">確認加入購物車</button>
+    </div>
+  </div>
+
+  <script>
+    const API = '';
+    const params = new URLSearchParams(window.location.search);
+    const tableId = parseInt(params.get('table'));
+
+    let menuData = [];
+    let cart = [];
+    let cartOpen = false;
+    let pendingNoteItem = null;
+    let currentCategoryIndex = 0;
+
+    async function init() {
+      if (!tableId || isNaN(tableId)) {
+        document.getElementById('menu-content').innerHTML =
+          '<div class="text-center text-red-400 py-20">無效的桌位連結，請重新掃描 QR 碼</div>';
+        return;
+      }
+
+      // Verify table
+      const tableRes = await fetch(`${API}/api/tables/${tableId}`);
+      if (!tableRes.ok) {
+        document.getElementById('menu-content').innerHTML =
+          '<div class="text-center text-red-400 py-20">桌位不存在，請重新掃描 QR 碼</div>';
+        return;
+      }
+      const table = await tableRes.json();
+      document.getElementById('table-name').textContent = table.name;
+      document.title = `線上點餐 - ${table.name}`;
+
+      // Load menu
+      const menuRes = await fetch(`${API}/api/menu/public`);
+      menuData = await menuRes.json();
+
+      if (!menuData.length) {
+        document.getElementById('menu-content').innerHTML =
+          '<div class="text-center text-gray-400 py-20">目前尚無菜單</div>';
+        return;
+      }
+
+      renderTabs();
+      renderCategory(0);
+    }
+
+    function renderTabs() {
+      const tabs = document.getElementById('category-tabs');
+      tabs.innerHTML = menuData.map((cat, i) => `
+        <button onclick="renderCategory(${i})" id="tab-${i}"
+          class="category-tab whitespace-nowrap px-4 py-2.5 text-sm font-medium text-gray-500 border-b-2 border-transparent transition ${i===0?'active':''}">
+          ${cat.name}
+        </button>
+      `).join('');
+    }
+
+    function renderCategory(index) {
+      currentCategoryIndex = index;
+      document.querySelectorAll('.category-tab').forEach((t, i) => {
+        t.classList.toggle('active', i === index);
+      });
+      const cat = menuData[index];
+      const el = document.getElementById('menu-content');
+      el.innerHTML = `
+        <div class="mb-2">
+          <h2 class="font-bold text-gray-800 text-lg">${cat.name}</h2>
+        </div>
+        <div class="space-y-3">
+          ${cat.items.map(item => `
+            <div class="item-card bg-white rounded-2xl shadow-sm overflow-hidden flex" onclick="addToCartWithNote(${item.id})">
+              <div class="flex-1 p-4">
+                <div class="font-semibold text-gray-800">${item.name}</div>
+                ${item.description ? `<div class="text-xs text-gray-500 mt-0.5 line-clamp-2">${item.description}</div>` : ''}
+                <div class="mt-2 flex items-center justify-between">
+                  <span class="text-orange-600 font-bold">NT$ ${item.price}</span>
+                  <button class="bg-orange-500 text-white w-7 h-7 rounded-full text-lg font-bold leading-none flex items-center justify-center active:scale-90 transition"
+                    onclick="event.stopPropagation(); addToCart(${item.id})">+</button>
+                </div>
+              </div>
+              ${item.imageBase64 ? `
+                <div class="w-28 flex-shrink-0">
+                  <img src="${item.imageBase64}" alt="${item.name}" class="w-full h-full object-cover">
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function findItem(id) {
+      for (const cat of menuData)
+        for (const item of cat.items)
+          if (item.id === id) return item;
+      return null;
+    }
+
+    function addToCartWithNote(id) {
+      const item = findItem(id);
+      if (!item) return;
+      pendingNoteItem = item;
+      document.getElementById('note-item-name').textContent = item.name;
+      document.getElementById('note-input').value = '';
+      document.getElementById('note-modal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('note-input').focus(), 100);
+    }
+
+    function confirmNote() {
+      if (!pendingNoteItem) return;
+      const note = document.getElementById('note-input').value.trim();
+      doAddToCart(pendingNoteItem, note);
+      pendingNoteItem = null;
+      document.getElementById('note-modal').classList.add('hidden');
+    }
+
+    function addToCart(id) {
+      const item = findItem(id);
+      if (!item) return;
+      doAddToCart(item, '');
+    }
+
+    function doAddToCart(item, note) {
+      const existing = cart.find(c => c.id === item.id && c.note === note);
+      if (existing) {
+        existing.qty++;
+      } else {
+        cart.push({ id: item.id, name: item.name, price: item.price, qty: 1, note });
+      }
+      updateCartBadge();
+      showToast(`已加入：${item.name}`);
+    }
+
+    function removeFromCart(index) {
+      cart.splice(index, 1);
+      updateCartBadge();
+      renderCartItems();
+    }
+
+    function changeQty(index, delta) {
+      cart[index].qty += delta;
+      if (cart[index].qty <= 0) cart.splice(index, 1);
+      updateCartBadge();
+      renderCartItems();
+    }
+
+    function updateCartBadge() {
+      const total = cart.reduce((s, c) => s + c.qty, 0);
+      const badge = document.getElementById('cart-badge');
+      badge.textContent = total;
+      badge.classList.toggle('hidden', total === 0);
+    }
+
+    function toggleCart() {
+      cartOpen = !cartOpen;
+      const sheet = document.getElementById('cart-sheet');
+      const overlay = document.getElementById('cart-overlay');
+      if (cartOpen) {
+        overlay.classList.remove('hidden');
+        sheet.style.transform = 'translateY(0)';
+        renderCartItems();
+      } else {
+        overlay.classList.add('hidden');
+        sheet.style.transform = 'translateY(100%)';
+      }
+    }
+
+    function renderCartItems() {
+      const el = document.getElementById('cart-items');
+      if (!cart.length) {
+        el.innerHTML = '<div class="text-center text-gray-400 py-8">購物車是空的</div>';
+        document.getElementById('cart-total').textContent = '0';
+        return;
+      }
+      el.innerHTML = cart.map((c, i) => `
+        <div class="flex items-center gap-3">
+          <div class="flex-1">
+            <div class="font-medium text-gray-800 text-sm">${c.name}</div>
+            ${c.note ? `<div class="text-xs text-gray-400">備註：${c.note}</div>` : ''}
+            <div class="text-orange-600 text-sm font-semibold">NT$ ${(c.price * c.qty).toFixed(0)}</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="changeQty(${i}, -1)" class="qty-btn w-7 h-7 rounded-full border border-gray-200 text-gray-600 flex items-center justify-center hover:bg-gray-50 transition text-base">-</button>
+            <span class="w-6 text-center font-medium text-sm">${c.qty}</span>
+            <button onclick="changeQty(${i}, 1)" class="qty-btn w-7 h-7 rounded-full bg-orange-500 text-white flex items-center justify-center hover:bg-orange-600 transition text-base">+</button>
+          </div>
+        </div>
+      `).join('');
+      const total = cart.reduce((s, c) => s + c.price * c.qty, 0);
+      document.getElementById('cart-total').textContent = total.toFixed(0);
+    }
+
+    async function submitOrder() {
+      if (!cart.length) { alert('請先加入菜品'); return; }
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+      btn.textContent = '送出中...';
+
+      try {
+        const res = await fetch(`${API}/api/orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tableId,
+            note: document.getElementById('order-note').value.trim() || null,
+            items: cart.map(c => ({
+              menuItemId: c.id,
+              quantity: c.qty,
+              note: c.note || null
+            }))
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || '送出失敗');
+
+        document.getElementById('success-order-id').textContent = `#${data.orderId}`;
+        document.getElementById('success-total').textContent = `NT$ ${data.totalAmount}`;
+        document.getElementById('success-screen').classList.remove('hidden');
+        // Close cart
+        cartOpen = false;
+        document.getElementById('cart-overlay').classList.add('hidden');
+        document.getElementById('cart-sheet').style.transform = 'translateY(100%)';
+      } catch (err) {
+        alert(err.message || '送出失敗，請重試');
+        btn.disabled = false;
+        btn.textContent = '送出訂單';
+      }
+    }
+
+    function resetOrder() {
+      cart = [];
+      updateCartBadge();
+      document.getElementById('success-screen').classList.add('hidden');
+      document.getElementById('order-note').value = '';
+    }
+
+    function showToast(msg) {
+      const t = document.createElement('div');
+      t.className = 'fixed bottom-28 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-sm px-4 py-2 rounded-full z-50 opacity-0 transition-opacity duration-300';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      requestAnimationFrame(() => { t.style.opacity = '1'; });
+      setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 1500);
+    }
+
+    // Close note modal on background click
+    document.getElementById('note-modal').addEventListener('click', function(e) {
+      if (e.target === this) { this.classList.add('hidden'); pendingNoteItem = null; }
+    });
+
+    init();
+  </script>
+</body>
+</html>
