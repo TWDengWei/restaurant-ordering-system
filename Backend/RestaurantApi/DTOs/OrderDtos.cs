@@ -45,6 +45,8 @@ public record OrderSummaryDto(
     string Status,
     string StatusLabel,
     decimal TotalAmount,
+    string? Note,
     DateTime CreatedAt,
-    int ItemCount
+    int ItemCount,
+    List<OrderItemDto> Items
 );

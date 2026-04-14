@@ -54,8 +54,12 @@ public class DashboardController : ControllerBase
             recentOrders.Select(o => new OrderSummaryDto(
                 o.Id, o.TableId, o.Table?.Name ?? $"桌 {o.TableId}",
                 o.Status.ToString(), GetStatusLabel(o.Status),
-                o.TotalAmount, o.CreatedAt,
-                o.OrderItems.Sum(oi => oi.Quantity)
+                o.TotalAmount, o.Note, o.CreatedAt,
+                o.OrderItems.Sum(oi => oi.Quantity),
+                o.OrderItems.Select(oi => new OrderItemDto(
+                    oi.Id, oi.MenuItemId, oi.ItemName, oi.ItemPrice,
+                    oi.Quantity, oi.Note, oi.ItemPrice * oi.Quantity
+                )).ToList()
             )).ToList()
         );
 

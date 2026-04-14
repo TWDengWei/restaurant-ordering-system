@@ -99,20 +99,29 @@
           return;
         }
         container.innerHTML = data.recentOrders.map(o => `
-          <div class="py-2 px-3 rounded-lg hover:bg-gray-50 border border-gray-100">
+          <div class="border border-gray-100 rounded-xl p-3 hover:bg-gray-50 transition">
             <div class="flex items-center justify-between mb-1">
               <div class="flex items-center gap-2">
-                <span class="font-medium text-gray-700">#${o.id}</span>
+                <span class="font-bold text-gray-800">#${o.id}</span>
                 <span class="text-gray-600">${o.tableName}</span>
-                <span class="text-sm text-gray-400">${o.itemCount} 項</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="text-sm font-medium text-gray-700">NT$ ${o.totalAmount}</span>
-                <span class="text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[o.status] || 'bg-gray-100 text-gray-500'}">${o.statusLabel}</span>
                 <span class="text-xs text-gray-400">${new Date(o.createdAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
+              <div class="flex items-center gap-2">
+                <span class="font-semibold text-gray-800">NT$ ${o.totalAmount}</span>
+                <span class="text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[o.status] || 'bg-gray-100 text-gray-500'}">${o.statusLabel}</span>
+              </div>
             </div>
-            <div class="flex gap-2 mt-1">
+            <!-- 訂單細項 -->
+            <div class="text-xs text-gray-500 pl-1 mb-2 space-y-0.5">
+              ${(o.items || []).map(i => `
+                <div class="flex justify-between">
+                  <span>${i.itemName} × ${i.quantity}${i.note ? ' <span class="text-orange-400">(' + i.note + ')</span>' : ''}</span>
+                  <span>NT$ ${i.subtotal}</span>
+                </div>
+              `).join('')}
+              ${o.note ? `<div class="text-blue-400 mt-0.5">備註：${o.note}</div>` : ''}
+            </div>
+            <div class="flex gap-2">
               ${o.status === 'Pending' ? `
                 <button onclick="quickAction(${o.id},'confirm')" class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg transition">確認訂單</button>
               ` : ''}

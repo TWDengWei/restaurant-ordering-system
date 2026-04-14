@@ -79,11 +79,15 @@ public class OrderController : ControllerBase
 
         if (date.HasValue)
         {
-            // CreatedAt 存 UTC；前端傳本地日期，轉成 UTC 區間（台灣 UTC+8 → 前一天 16:00 ~ 當天 15:59:59 UTC）
-            var localOffset = TimeSpan.FromHours(8); // Asia/Taipei
-            var start = date.Value.ToDateTime(TimeOnly.MinValue) - localOffset;
-            var end   = date.Value.ToDateTime(TimeOnly.MaxValue) - localOffset;
-            query = query.Where(o => o.CreatedAt >= start && o.CreatedAt <= end);
+            // CreatedAt 存 UTC+0；前端傳台灣本地日期(UTC+8)，需轉成對應的 UTC 區間
+            const int tzOffsetHours = 8;
+            var startUtc = DateTime.SpecifyKind(
+                date.Value.ToDateTime(TimeOnly.MinValue).AddHours(-tzOffsetHours),
+                DateTimeKind.Utc);
+            var endUtc = DateTime.SpecifyKind(
+                date.Value.ToDateTime(TimeOnly.MaxValue).AddHours(-tzOffsetHours),
+                DateTimeKind.Utc);
+            query = query.Where(o => o.CreatedAt >= startUtc && o.CreatedAt <= endUtc);
         }
 
         var orders = await query
@@ -203,7 +207,12 @@ public class OrderController : ControllerBase
         o.Status.ToString(),
         GetStatusLabel(o.Status),
         o.TotalAmount,
+        o.Note,
         o.CreatedAt,
-        o.OrderItems.Sum(oi => oi.Quantity)
+        o.OrderItems.Sum(oi => oi.Quantity),
+        o.OrderItems.Select(oi => new OrderItemDto(
+            oi.Id, oi.MenuItemId, oi.ItemName, oi.ItemPrice,
+            oi.Quantity, oi.Note, oi.ItemPrice * oi.Quantity
+        )).ToList()
     );
 }

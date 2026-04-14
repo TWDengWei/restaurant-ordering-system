@@ -140,18 +140,31 @@
       }
       c.innerHTML = orders.map(o => `
         <div class="bg-white rounded-xl shadow-sm p-4 ${statusColors[o.status] || ''}">
-          <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center justify-between mb-1">
             <div class="flex items-center gap-2">
               <span class="font-bold text-gray-800">#${o.id}</span>
               <span class="font-medium text-gray-700">${o.tableName}</span>
             </div>
             <span class="text-xs px-2 py-0.5 rounded-full font-medium ${badgeColors[o.status] || ''}">${o.statusLabel}</span>
           </div>
-          <div class="text-xs text-gray-400 mb-3">${new Date(o.createdAt).toLocaleString('zh-TW')}</div>
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-gray-600 text-sm">${o.itemCount} 項商品</span>
-            <span class="font-bold text-gray-800">NT$ ${o.totalAmount}</span>
+          <div class="text-xs text-gray-400 mb-2">${new Date(o.createdAt).toLocaleString('zh-TW')}</div>
+
+          <!-- 訂單細項 -->
+          <div class="bg-gray-50 rounded-lg px-3 py-2 mb-3 space-y-1">
+            ${(o.items || []).map(i => `
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-700">${i.itemName} <span class="text-gray-400">× ${i.quantity}</span></span>
+                <span class="text-gray-600">NT$ ${i.subtotal}</span>
+              </div>
+              ${i.note ? `<div class="text-xs text-orange-500 pl-2">備註：${i.note}</div>` : ''}
+            `).join('')}
+            <div class="flex justify-between font-bold text-sm border-t border-gray-200 pt-1 mt-1">
+              <span class="text-gray-700">合計</span>
+              <span class="text-gray-800">NT$ ${o.totalAmount}</span>
+            </div>
+            ${o.note ? `<div class="text-xs text-blue-500 mt-1">訂單備註：${o.note}</div>` : ''}
           </div>
+
           <div class="flex flex-wrap gap-2">
             ${o.status === 'Pending' ? `
               <button onclick="confirmOrder(${o.id})" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-xs py-1.5 rounded-lg transition">確認訂單</button>
@@ -167,7 +180,6 @@
               <button onclick="cancelOrder(${o.id})" class="bg-red-100 hover:bg-red-200 text-red-600 text-xs py-1.5 px-3 rounded-lg transition">取消</button>
             ` : ''}
             <button onclick="printOrder(${o.id})" class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs py-1.5 px-3 rounded-lg transition">列印</button>
-            <button onclick="showDetail(${o.id})" class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs py-1.5 px-3 rounded-lg transition">明細</button>
           </div>
         </div>
       `).join('');
