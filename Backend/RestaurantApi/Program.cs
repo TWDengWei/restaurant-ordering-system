@@ -94,6 +94,23 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// 全域錯誤處理（回傳 JSON 錯誤訊息，方便除錯）
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        context.Response.StatusCode = 500;
+        context.Response.ContentType = "application/json";
+        var feature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+        var msg = feature?.Error?.Message ?? "Internal server error";
+        await context.Response.WriteAsync(
+            System.Text.Json.JsonSerializer.Serialize(new { error = msg }));
+    });
+});
+
+// 健康檢查端點（不需要 DB）
+app.MapGet("/health", () => Results.Ok(new { status = "ok", time = DateTime.UtcNow }));
+
 app.UseCors();
 app.UseDefaultFiles();
 app.UseStaticFiles();
