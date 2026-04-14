@@ -8,7 +8,17 @@ using RestaurantApi.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 // ── 資料庫 ──────────────────────────────────────────────
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")!;
+// 優先從 Render 注入的個別 DB 環境變數組裝，回退到 appsettings
+var dbHost     = Environment.GetEnvironmentVariable("DB_HOST");
+var dbPort     = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
+var dbName     = Environment.GetEnvironmentVariable("DB_NAME");
+var dbUser     = Environment.GetEnvironmentVariable("DB_USER");
+var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
+
+var connectionString = (dbHost != null && dbName != null && dbUser != null && dbPassword != null)
+    ? $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPassword};SSL Mode=Require;Trust Server Certificate=true"
+    : builder.Configuration.GetConnectionString("DefaultConnection")!;
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString, npgsqlOptions =>
         npgsqlOptions.EnableRetryOnFailure(3)));
