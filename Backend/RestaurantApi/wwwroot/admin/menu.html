@@ -6,14 +6,14 @@
   <title>菜單管理 - 餐飲管理系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    #sidebar { transition: transform 0.3s ease, width 0.3s ease; }
+    #sidebar { transition: transform 0.3s ease, width 0.3s ease; transform: translateX(-100%); }
+    #sidebar.open { transform: translateX(0); }
     #main-content { transition: margin-left 0.3s ease; }
     @media (max-width: 767px) {
-      #sidebar { transform: translateX(-100%); }
-      #sidebar.open { transform: translateX(0); }
       #main-content { margin-left: 0 !important; padding-top: 3.5rem; }
     }
     @media (min-width: 768px) {
+      #sidebar { transform: translateX(0); }
       #sidebar.collapsed { width: 3.5rem; }
       #sidebar.collapsed .nav-label { display: none; }
       #sidebar.collapsed .nav-link { justify-content: center; padding-left: 0; padding-right: 0; }
@@ -25,7 +25,7 @@
 
   <!-- Mobile Top Bar -->
   <div class="md:hidden fixed top-0 left-0 right-0 h-14 bg-gray-900 text-white flex items-center px-4 z-40 shadow-lg">
-    <button onclick="openSidebar()" class="mr-3 p-1.5 rounded-lg hover:bg-gray-700 focus:outline-none">
+    <button onclick="toggleSidebar()" class="mr-3 p-1.5 rounded-lg hover:bg-gray-700 focus:outline-none">
       <div class="space-y-1.5">
         <div class="w-5 h-0.5 bg-white rounded"></div>
         <div class="w-5 h-0.5 bg-white rounded"></div>
@@ -407,9 +407,9 @@
     }
 
     // ── Sidebar RWD ────────────────────────────────
-    function openSidebar() {
-      document.getElementById('sidebar').classList.add('open');
-      document.getElementById('sidebar-overlay').classList.remove('hidden');
+    function toggleSidebar() {
+      const isOpen = document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebar-overlay').classList.toggle('hidden', !isOpen);
     }
     function closeSidebar() {
       document.getElementById('sidebar').classList.remove('open');
