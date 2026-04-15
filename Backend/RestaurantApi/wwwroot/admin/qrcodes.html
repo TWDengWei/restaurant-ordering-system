@@ -5,43 +5,81 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QR碼管理 - 餐飲管理系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    #sidebar { transition: transform 0.3s ease, width 0.3s ease; }
+    #main-content { transition: margin-left 0.3s ease; }
+    @media (max-width: 767px) {
+      #sidebar { transform: translateX(-100%); }
+      #sidebar.open { transform: translateX(0); }
+      #main-content { margin-left: 0 !important; padding-top: 3.5rem; }
+    }
+    @media (min-width: 768px) {
+      #sidebar.collapsed { width: 3.5rem; }
+      #sidebar.collapsed .nav-label { display: none; }
+      #sidebar.collapsed .nav-link { justify-content: center; padding-left: 0; padding-right: 0; }
+      #main-content.collapsed-main { margin-left: 3.5rem !important; }
+    }
+  </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex">
 
+  <!-- Mobile Top Bar -->
+  <div class="md:hidden fixed top-0 left-0 right-0 h-14 bg-gray-900 text-white flex items-center px-4 z-40 shadow-lg">
+    <button onclick="openSidebar()" class="mr-3 p-1.5 rounded-lg hover:bg-gray-700 focus:outline-none">
+      <div class="space-y-1.5">
+        <div class="w-5 h-0.5 bg-white rounded"></div>
+        <div class="w-5 h-0.5 bg-white rounded"></div>
+        <div class="w-5 h-0.5 bg-white rounded"></div>
+      </div>
+    </button>
+    <span class="text-lg font-bold">🍽️ 餐飲管理</span>
+  </div>
+
+  <!-- Sidebar Overlay (mobile) -->
+  <div id="sidebar-overlay" onclick="closeSidebar()" class="hidden fixed inset-0 bg-black/50 z-20 md:hidden"></div>
+
   <!-- Sidebar -->
-  <aside class="w-56 bg-gray-900 text-white flex flex-col min-h-screen fixed left-0 top-0 z-30">
+  <aside id="sidebar" class="w-56 bg-gray-900 text-white flex flex-col min-h-screen fixed left-0 top-0 z-30">
     <div class="p-5 border-b border-gray-700">
-      <div class="text-xl font-bold">🍽️ 餐飲管理</div>
-      <div class="text-xs text-gray-400 mt-1" id="admin-name"></div>
+      <div class="flex items-center gap-2">
+        <span class="text-xl">🍽️</span>
+        <span class="font-bold nav-label">餐飲管理</span>
+      </div>
+      <div class="text-xs text-gray-400 mt-1 nav-label" id="admin-name"></div>
     </div>
     <nav class="flex-1 p-3 space-y-1">
-      <a href="dashboard.html" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition">📊 儀表板</a>
-      <a href="orders.html"    class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition">📋 訂單管理</a>
-      <a href="menu.html"      class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition">🍜 菜單管理</a>
-      <a href="reports.html"   class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition">📈 報表</a>
-      <a href="qrcodes.html"   class="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-600 text-white text-sm font-medium">🔲 QR碼管理</a>
+      <a href="dashboard.html" class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition"><span>📊</span><span class="nav-label">儀表板</span></a>
+      <a href="orders.html"    class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition"><span>📋</span><span class="nav-label">訂單管理</span></a>
+      <a href="menu.html"      class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition"><span>🍜</span><span class="nav-label">菜單管理</span></a>
+      <a href="reports.html"   class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition"><span>📈</span><span class="nav-label">報表</span></a>
+      <a href="qrcodes.html"   class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-600 text-white text-sm font-medium"><span>🔲</span><span class="nav-label">QR碼管理</span></a>
     </nav>
-    <div class="p-3">
-      <button onclick="logout()" class="w-full px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-400 text-sm text-left transition">登出</button>
+    <div class="p-3 space-y-1">
+      <button onclick="toggleCollapse()" id="collapse-btn" class="hidden md:flex w-full px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-400 text-sm items-center gap-2 transition">
+        <span id="collapse-icon">◀</span><span class="nav-label">收縮選單</span>
+      </button>
+      <button onclick="logout()" class="nav-link w-full px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-400 text-sm text-left flex items-center gap-2 transition">
+        <span>🚪</span><span class="nav-label">登出</span>
+      </button>
     </div>
   </aside>
 
   <!-- Main -->
-  <main class="ml-56 flex-1 p-6">
+  <main id="main-content" class="ml-56 flex-1 p-4 md:p-6">
     <h1 class="text-2xl font-bold text-gray-800 mb-6">QR碼管理</h1>
 
     <div class="bg-white rounded-xl shadow-sm p-5 mb-4">
-      <div class="flex items-center justify-between mb-2">
+      <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
         <h2 class="font-semibold text-gray-700">桌位 QR 碼</h2>
         <div class="text-sm text-gray-500">掃碼後開啟線上點餐</div>
       </div>
       <p class="text-xs text-gray-400 mb-3">客人掃描 QR 碼後，將直接進入對應桌位的點餐頁面</p>
-      <div class="bg-orange-50 border border-orange-100 rounded-lg px-4 py-2 text-sm text-orange-700 mb-2">
+      <div class="bg-orange-50 border border-orange-100 rounded-lg px-4 py-2 text-sm text-orange-700 mb-2 break-all">
         目前 QR 碼指向：<strong id="current-base-url"></strong>
       </div>
     </div>
 
-    <div id="qr-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+    <div id="qr-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
       <div class="text-gray-400 text-sm text-center col-span-full py-8">載入中...</div>
     </div>
     <p class="text-xs text-gray-400 mt-4">* QR 碼圖片由 api.qrserver.com 產生，需網路連線</p>
@@ -78,7 +116,7 @@
             <div class="bg-white rounded-xl shadow-sm p-4 flex flex-col items-center text-center">
               <div class="font-semibold text-gray-700 mb-3">${t.name}</div>
               <img id="qrimg-${t.id}" src="${qrSrc}" alt="QR ${t.name}"
-                class="mb-2 border border-gray-100 rounded" style="width:160px;height:160px">
+                class="mb-2 border border-gray-100 rounded" style="width:140px;height:140px">
               <div class="text-xs text-gray-400 mb-3">桌位 ${t.id}</div>
               <a href="${dlSrc}" target="_blank"
                 class="text-xs bg-orange-50 text-orange-600 px-3 py-1 rounded-lg hover:bg-orange-100 transition">
@@ -106,6 +144,35 @@
       localStorage.removeItem('username');
       window.location.href = '/admin/index.html';
     }
+
+    // ── Sidebar RWD ────────────────────────────────
+    function openSidebar() {
+      document.getElementById('sidebar').classList.add('open');
+      document.getElementById('sidebar-overlay').classList.remove('hidden');
+    }
+    function closeSidebar() {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebar-overlay').classList.add('hidden');
+    }
+    function toggleCollapse() {
+      const sidebar = document.getElementById('sidebar');
+      const main    = document.getElementById('main-content');
+      const icon    = document.getElementById('collapse-icon');
+      const col     = sidebar.classList.toggle('collapsed');
+      main.classList.toggle('collapsed-main', col);
+      if (icon) icon.textContent = col ? '▶' : '◀';
+      localStorage.setItem('sidebarCollapsed', col ? '1' : '0');
+    }
+    (function () {
+      if (window.innerWidth >= 768 && localStorage.getItem('sidebarCollapsed') === '1') {
+        const s = document.getElementById('sidebar');
+        const m = document.getElementById('main-content');
+        const i = document.getElementById('collapse-icon');
+        if (s) s.classList.add('collapsed');
+        if (m) m.classList.add('collapsed-main');
+        if (i) i.textContent = '▶';
+      }
+    })();
 
     loadQRCodes();
   </script>

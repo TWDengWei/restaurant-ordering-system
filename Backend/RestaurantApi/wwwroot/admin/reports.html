@@ -5,33 +5,71 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>報表 - 餐飲管理系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    #sidebar { transition: transform 0.3s ease, width 0.3s ease; }
+    #main-content { transition: margin-left 0.3s ease; }
+    @media (max-width: 767px) {
+      #sidebar { transform: translateX(-100%); }
+      #sidebar.open { transform: translateX(0); }
+      #main-content { margin-left: 0 !important; padding-top: 3.5rem; }
+    }
+    @media (min-width: 768px) {
+      #sidebar.collapsed { width: 3.5rem; }
+      #sidebar.collapsed .nav-label { display: none; }
+      #sidebar.collapsed .nav-link { justify-content: center; padding-left: 0; padding-right: 0; }
+      #main-content.collapsed-main { margin-left: 3.5rem !important; }
+    }
+  </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex">
 
+  <!-- Mobile Top Bar -->
+  <div class="md:hidden fixed top-0 left-0 right-0 h-14 bg-gray-900 text-white flex items-center px-4 z-40 shadow-lg">
+    <button onclick="openSidebar()" class="mr-3 p-1.5 rounded-lg hover:bg-gray-700 focus:outline-none">
+      <div class="space-y-1.5">
+        <div class="w-5 h-0.5 bg-white rounded"></div>
+        <div class="w-5 h-0.5 bg-white rounded"></div>
+        <div class="w-5 h-0.5 bg-white rounded"></div>
+      </div>
+    </button>
+    <span class="text-lg font-bold">🍽️ 餐飲管理</span>
+  </div>
+
+  <!-- Sidebar Overlay (mobile) -->
+  <div id="sidebar-overlay" onclick="closeSidebar()" class="hidden fixed inset-0 bg-black/50 z-20 md:hidden"></div>
+
   <!-- Sidebar -->
-  <aside class="w-56 bg-gray-900 text-white flex flex-col min-h-screen fixed left-0 top-0 z-30">
+  <aside id="sidebar" class="w-56 bg-gray-900 text-white flex flex-col min-h-screen fixed left-0 top-0 z-30">
     <div class="p-5 border-b border-gray-700">
-      <div class="text-xl font-bold">🍽️ 餐飲管理</div>
-      <div class="text-xs text-gray-400 mt-1" id="admin-name"></div>
+      <div class="flex items-center gap-2">
+        <span class="text-xl">🍽️</span>
+        <span class="font-bold nav-label">餐飲管理</span>
+      </div>
+      <div class="text-xs text-gray-400 mt-1 nav-label" id="admin-name"></div>
     </div>
     <nav class="flex-1 p-3 space-y-1">
-      <a href="dashboard.html" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition">📊 儀表板</a>
-      <a href="orders.html"    class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition">📋 訂單管理</a>
-      <a href="menu.html"      class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition">🍜 菜單管理</a>
-      <a href="reports.html"   class="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-600 text-white text-sm font-medium">📈 報表</a>
-      <a href="qrcodes.html"   class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition">🔲 QR碼管理</a>
+      <a href="dashboard.html" class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition"><span>📊</span><span class="nav-label">儀表板</span></a>
+      <a href="orders.html"    class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition"><span>📋</span><span class="nav-label">訂單管理</span></a>
+      <a href="menu.html"      class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition"><span>🍜</span><span class="nav-label">菜單管理</span></a>
+      <a href="reports.html"   class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-600 text-white text-sm font-medium"><span>📈</span><span class="nav-label">報表</span></a>
+      <a href="qrcodes.html"   class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition"><span>🔲</span><span class="nav-label">QR碼管理</span></a>
     </nav>
-    <div class="p-3">
-      <button onclick="logout()" class="w-full px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-400 text-sm text-left transition">登出</button>
+    <div class="p-3 space-y-1">
+      <button onclick="toggleCollapse()" id="collapse-btn" class="hidden md:flex w-full px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-400 text-sm items-center gap-2 transition">
+        <span id="collapse-icon">◀</span><span class="nav-label">收縮選單</span>
+      </button>
+      <button onclick="logout()" class="nav-link w-full px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-400 text-sm text-left flex items-center gap-2 transition">
+        <span>🚪</span><span class="nav-label">登出</span>
+      </button>
     </div>
   </aside>
 
   <!-- Main -->
-  <main class="ml-56 flex-1 p-6">
+  <main id="main-content" class="ml-56 flex-1 p-4 md:p-6">
     <h1 class="text-2xl font-bold text-gray-800 mb-6">報表</h1>
 
     <!-- Tabs -->
-    <div class="flex gap-2 mb-6">
+    <div class="flex gap-2 mb-6 flex-wrap">
       <button onclick="showTab('daily')"      id="tab-daily"      class="px-4 py-2 rounded-lg text-sm font-medium bg-orange-500 text-white transition">每日報表</button>
       <button onclick="showTab('monthly')"    id="tab-monthly"    class="px-4 py-2 rounded-lg text-sm font-medium bg-white text-gray-600 hover:bg-gray-50 transition">月報表</button>
       <button onclick="showTab('menu-stats')" id="tab-menu-stats" class="px-4 py-2 rounded-lg text-sm font-medium bg-white text-gray-600 hover:bg-gray-50 transition">熱銷菜品</button>
@@ -40,7 +78,7 @@
     <!-- Daily Report Tab -->
     <div id="panel-daily">
       <div class="bg-white rounded-xl shadow-sm p-5">
-        <div class="flex items-center gap-3 mb-5">
+        <div class="flex items-center gap-3 mb-5 flex-wrap">
           <input type="date" id="daily-date" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
           <button onclick="loadDaily()" class="bg-orange-500 hover:bg-orange-600 text-white text-sm px-4 py-1.5 rounded-lg transition">查詢</button>
         </div>
@@ -53,7 +91,7 @@
     <!-- Monthly Report Tab -->
     <div id="panel-monthly" class="hidden">
       <div class="bg-white rounded-xl shadow-sm p-5">
-        <div class="flex items-center gap-3 mb-5">
+        <div class="flex items-center gap-3 mb-5 flex-wrap">
           <select id="monthly-year" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"></select>
           <select id="monthly-month" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"></select>
           <button onclick="loadMonthly()" class="bg-orange-500 hover:bg-orange-600 text-white text-sm px-4 py-1.5 rounded-lg transition">查詢</button>
@@ -93,7 +131,6 @@
 
     const localDate = () => new Date().toLocaleDateString('en-CA');
 
-    // Init date inputs
     document.getElementById('daily-date').value = localDate();
 
     const nowDate = new Date();
@@ -122,7 +159,7 @@
       const res  = await fetch(`${API}/api/reports/daily?date=${date}`, { headers: { Authorization: `Bearer ${token}` } });
       const d    = await res.json();
       document.getElementById('daily-content').innerHTML = `
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
           <div class="bg-green-50 rounded-xl p-4 text-center">
             <div class="text-sm text-gray-500">營業額</div>
             <div class="text-xl font-bold text-green-600">NT$ ${d.totalRevenue.toLocaleString()}</div>
@@ -204,19 +241,21 @@
       const el    = document.getElementById('menu-stats-content');
       if (!stats.length) { el.innerHTML = '<div class="text-gray-400 text-center py-8">此期間無銷售資料</div>'; return; }
       el.innerHTML = `
-        <table class="w-full text-sm">
-          <thead><tr class="text-left text-gray-500 border-b">
-            <th class="pb-2">排名</th><th class="pb-2">菜品</th><th class="pb-2">銷售量</th><th class="pb-2">銷售額</th>
-          </tr></thead>
-          <tbody>${stats.map((s,i)=>`
-            <tr class="border-b border-gray-50">
-              <td class="py-2 font-bold text-gray-400">#${i+1}</td>
-              <td class="py-2 font-medium text-gray-800">${s.itemName}</td>
-              <td class="py-2 text-blue-600">${s.totalQuantity} 份</td>
-              <td class="py-2 text-green-600">NT$ ${s.totalRevenue.toLocaleString()}</td>
-            </tr>`).join('')}
-          </tbody>
-        </table>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead><tr class="text-left text-gray-500 border-b">
+              <th class="pb-2">排名</th><th class="pb-2">菜品</th><th class="pb-2">銷售量</th><th class="pb-2">銷售額</th>
+            </tr></thead>
+            <tbody>${stats.map((s,i)=>`
+              <tr class="border-b border-gray-50">
+                <td class="py-2 font-bold text-gray-400">#${i+1}</td>
+                <td class="py-2 font-medium text-gray-800">${s.itemName}</td>
+                <td class="py-2 text-blue-600">${s.totalQuantity} 份</td>
+                <td class="py-2 text-green-600">NT$ ${s.totalRevenue.toLocaleString()}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
       `;
     }
 
@@ -226,7 +265,35 @@
       window.location.href = '/admin/index.html';
     }
 
-    // 預設載入今日報表
+    // ── Sidebar RWD ────────────────────────────────
+    function openSidebar() {
+      document.getElementById('sidebar').classList.add('open');
+      document.getElementById('sidebar-overlay').classList.remove('hidden');
+    }
+    function closeSidebar() {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebar-overlay').classList.add('hidden');
+    }
+    function toggleCollapse() {
+      const sidebar = document.getElementById('sidebar');
+      const main    = document.getElementById('main-content');
+      const icon    = document.getElementById('collapse-icon');
+      const col     = sidebar.classList.toggle('collapsed');
+      main.classList.toggle('collapsed-main', col);
+      if (icon) icon.textContent = col ? '▶' : '◀';
+      localStorage.setItem('sidebarCollapsed', col ? '1' : '0');
+    }
+    (function () {
+      if (window.innerWidth >= 768 && localStorage.getItem('sidebarCollapsed') === '1') {
+        const s = document.getElementById('sidebar');
+        const m = document.getElementById('main-content');
+        const i = document.getElementById('collapse-icon');
+        if (s) s.classList.add('collapsed');
+        if (m) m.classList.add('collapsed-main');
+        if (i) i.textContent = '▶';
+      }
+    })();
+
     loadDaily();
   </script>
 </body>

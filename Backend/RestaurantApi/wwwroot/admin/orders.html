@@ -11,30 +11,66 @@
       #print-area { display: block !important; }
     }
     #print-area { display: none; }
+    #sidebar { transition: transform 0.3s ease, width 0.3s ease; }
+    #main-content { transition: margin-left 0.3s ease; }
+    @media (max-width: 767px) {
+      #sidebar { transform: translateX(-100%); }
+      #sidebar.open { transform: translateX(0); }
+      #main-content { margin-left: 0 !important; padding-top: 3.5rem; }
+    }
+    @media (min-width: 768px) {
+      #sidebar.collapsed { width: 3.5rem; }
+      #sidebar.collapsed .nav-label { display: none; }
+      #sidebar.collapsed .nav-link { justify-content: center; padding-left: 0; padding-right: 0; }
+      #main-content.collapsed-main { margin-left: 3.5rem !important; }
+    }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex">
 
+  <!-- Mobile Top Bar -->
+  <div class="md:hidden fixed top-0 left-0 right-0 h-14 bg-gray-900 text-white flex items-center px-4 z-40 shadow-lg">
+    <button onclick="openSidebar()" class="mr-3 p-1.5 rounded-lg hover:bg-gray-700 focus:outline-none">
+      <div class="space-y-1.5">
+        <div class="w-5 h-0.5 bg-white rounded"></div>
+        <div class="w-5 h-0.5 bg-white rounded"></div>
+        <div class="w-5 h-0.5 bg-white rounded"></div>
+      </div>
+    </button>
+    <span class="text-lg font-bold">🍽️ 餐飲管理</span>
+  </div>
+
+  <!-- Sidebar Overlay (mobile) -->
+  <div id="sidebar-overlay" onclick="closeSidebar()" class="hidden fixed inset-0 bg-black/50 z-20 md:hidden"></div>
+
   <!-- Sidebar -->
-  <aside class="w-56 bg-gray-900 text-white flex flex-col min-h-screen fixed left-0 top-0 z-30">
+  <aside id="sidebar" class="w-56 bg-gray-900 text-white flex flex-col min-h-screen fixed left-0 top-0 z-30">
     <div class="p-5 border-b border-gray-700">
-      <div class="text-xl font-bold">🍽️ 餐飲管理</div>
-      <div class="text-xs text-gray-400 mt-1" id="admin-name"></div>
+      <div class="flex items-center gap-2">
+        <span class="text-xl">🍽️</span>
+        <span class="font-bold nav-label">餐飲管理</span>
+      </div>
+      <div class="text-xs text-gray-400 mt-1 nav-label" id="admin-name"></div>
     </div>
     <nav class="flex-1 p-3 space-y-1">
-      <a href="dashboard.html" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition">📊 儀表板</a>
-      <a href="orders.html"    class="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-600 text-white text-sm font-medium">📋 訂單管理</a>
-      <a href="menu.html"      class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition">🍜 菜單管理</a>
-      <a href="reports.html"   class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition">📈 報表</a>
-      <a href="qrcodes.html"   class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition">🔲 QR碼管理</a>
+      <a href="dashboard.html" class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition"><span>📊</span><span class="nav-label">儀表板</span></a>
+      <a href="orders.html"    class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-600 text-white text-sm font-medium"><span>📋</span><span class="nav-label">訂單管理</span></a>
+      <a href="menu.html"      class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition"><span>🍜</span><span class="nav-label">菜單管理</span></a>
+      <a href="reports.html"   class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition"><span>📈</span><span class="nav-label">報表</span></a>
+      <a href="qrcodes.html"   class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-300 text-sm transition"><span>🔲</span><span class="nav-label">QR碼管理</span></a>
     </nav>
-    <div class="p-3">
-      <button onclick="logout()" class="w-full px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-400 text-sm text-left transition">登出</button>
+    <div class="p-3 space-y-1">
+      <button onclick="toggleCollapse()" id="collapse-btn" class="hidden md:flex w-full px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-400 text-sm items-center gap-2 transition">
+        <span id="collapse-icon">◀</span><span class="nav-label">收縮選單</span>
+      </button>
+      <button onclick="logout()" class="nav-link w-full px-3 py-2 rounded-lg hover:bg-gray-700 text-gray-400 text-sm text-left flex items-center gap-2 transition">
+        <span>🚪</span><span class="nav-label">登出</span>
+      </button>
     </div>
   </aside>
 
   <!-- Main -->
-  <main class="ml-56 flex-1 p-6">
+  <main id="main-content" class="ml-56 flex-1 p-4 md:p-6">
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-bold text-gray-800">訂單管理</h1>
       <div class="flex items-center gap-2 text-sm text-gray-500">
@@ -44,7 +80,7 @@
     </div>
 
     <!-- Filters -->
-    <div class="bg-white rounded-xl shadow-sm p-4 mb-5 flex flex-wrap gap-3 items-center">
+    <div class="bg-white rounded-xl shadow-sm p-4 mb-5 flex flex-wrap gap-3 items-end">
       <div>
         <label class="text-xs text-gray-500 block mb-1">狀態篩選</label>
         <select id="filter-status" onchange="loadOrders()"
@@ -63,7 +99,7 @@
           class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
       </div>
       <button onclick="loadOrders()"
-        class="mt-4 bg-orange-500 hover:bg-orange-600 text-white text-sm px-4 py-1.5 rounded-lg transition">
+        class="bg-orange-500 hover:bg-orange-600 text-white text-sm px-4 py-1.5 rounded-lg transition">
         重新整理
       </button>
     </div>
@@ -100,7 +136,6 @@
     if (!token) window.location.href = '/admin/index.html';
     document.getElementById('admin-name').textContent = localStorage.getItem('username') || '';
 
-    // 預設今天（用本地日期，避免 UTC+8 跨日問題）
     document.getElementById('filter-date').value = new Date().toLocaleDateString('en-CA');
 
     const statusColors = {
@@ -141,21 +176,19 @@
       }
       c.innerHTML = orders.map(o => `
         <div class="bg-white rounded-xl shadow-sm overflow-hidden ${statusColors[o.status] || ''}">
-          <!-- 標題列（點擊折疊） -->
           <div class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50 transition"
             onclick="toggleDetail('ord-${o.id}')">
-            <div class="flex items-center gap-2">
-              <span class="font-bold text-gray-800">#${o.id}</span>
-              <span class="font-medium text-gray-700">${o.tableName}</span>
-              <span class="text-xs text-gray-400">${new Date(o.createdAt).toLocaleString('zh-TW')}</span>
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="font-bold text-gray-800 flex-shrink-0">#${o.id}</span>
+              <span class="font-medium text-gray-700 flex-shrink-0">${o.tableName}</span>
+              <span class="text-xs text-gray-400 hidden sm:inline truncate">${new Date(o.createdAt).toLocaleString('zh-TW')}</span>
             </div>
-            <div class="flex items-center gap-2">
-              <span class="font-bold text-gray-800">NT$ ${o.totalAmount}</span>
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+              <span class="font-bold text-gray-800 text-sm">NT$ ${o.totalAmount}</span>
               <span class="text-xs px-2 py-0.5 rounded-full font-medium ${badgeColors[o.status] || ''}">${o.statusLabel}</span>
               <span id="icon-ord-${o.id}" class="text-gray-400 text-xs">▼</span>
             </div>
           </div>
-          <!-- 折疊細項（預設隱藏） -->
           <div id="detail-ord-${o.id}" class="hidden border-t border-gray-100 px-4 py-3 bg-gray-50">
             <div class="space-y-1 mb-3">
               ${(o.items || []).map(i => `
@@ -200,12 +233,8 @@
       icon.textContent = hidden ? '▼' : '▲';
     }
 
-    async function confirmOrder(id) {
-      await doAction(`${API}/api/orders/${id}/confirm`, 'PUT');
-    }
-    async function setDining(id) {
-      await doAction(`${API}/api/orders/${id}/dining`, 'PUT');
-    }
+    async function confirmOrder(id) { await doAction(`${API}/api/orders/${id}/confirm`, 'PUT'); }
+    async function setDining(id)    { await doAction(`${API}/api/orders/${id}/dining`, 'PUT'); }
     async function payOrder(id) {
       if (!confirm('確認結帳？')) return;
       await doAction(`${API}/api/orders/${id}/pay`, 'PUT');
@@ -217,10 +246,7 @@
 
     async function doAction(url, method) {
       try {
-        const res = await fetch(url, {
-          method,
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await fetch(url, { method, headers: { Authorization: `Bearer ${token}` } });
         if (res.status === 401) { logout(); return; }
         if (!res.ok) {
           let msg = '操作失敗';
@@ -235,12 +261,9 @@
     }
 
     async function printOrder(id) {
-      // 展開細項以便列印時可見
       const detail = document.getElementById(`detail-ord-${id}`);
       if (detail) detail.classList.remove('hidden');
-      const res = await fetch(`${API}/api/orders/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await fetch(`${API}/api/orders/${id}`, { headers: { Authorization: `Bearer ${token}` } });
       const o = await res.json();
 
       document.getElementById('p-time').textContent = new Date(o.createdAt).toLocaleString('zh-TW');
@@ -253,7 +276,6 @@
         </div>${i.note ? `<div class="text-xs text-gray-500 pl-2">備註：${i.note}</div>` : ''}`
       ).join('');
       document.getElementById('p-total').textContent = `NT$ ${o.totalAmount}`;
-
       window.print();
     }
 
@@ -262,6 +284,35 @@
       localStorage.removeItem('username');
       window.location.href = '/admin/index.html';
     }
+
+    // ── Sidebar RWD ────────────────────────────────
+    function openSidebar() {
+      document.getElementById('sidebar').classList.add('open');
+      document.getElementById('sidebar-overlay').classList.remove('hidden');
+    }
+    function closeSidebar() {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebar-overlay').classList.add('hidden');
+    }
+    function toggleCollapse() {
+      const sidebar = document.getElementById('sidebar');
+      const main    = document.getElementById('main-content');
+      const icon    = document.getElementById('collapse-icon');
+      const col     = sidebar.classList.toggle('collapsed');
+      main.classList.toggle('collapsed-main', col);
+      if (icon) icon.textContent = col ? '▶' : '◀';
+      localStorage.setItem('sidebarCollapsed', col ? '1' : '0');
+    }
+    (function () {
+      if (window.innerWidth >= 768 && localStorage.getItem('sidebarCollapsed') === '1') {
+        const s = document.getElementById('sidebar');
+        const m = document.getElementById('main-content');
+        const i = document.getElementById('collapse-icon');
+        if (s) s.classList.add('collapsed');
+        if (m) m.classList.add('collapsed-main');
+        if (i) i.textContent = '▶';
+      }
+    })();
 
     loadOrders();
     setInterval(loadOrders, 15000);
